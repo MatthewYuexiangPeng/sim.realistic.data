@@ -3,6 +3,7 @@ setwd("D:/OneDrive - UW/Documents/GitHub/sim.realistic.data")
 
 library(mvtnorm)
 
+# Functions used to generate data ----
 .ordgendata <- function(n, sigma, quants.norm){
   retval = mvtnorm::rmvnorm(n = n, sigma = sigma)
   for (i in 1:ncol(sigma)) {
@@ -142,8 +143,9 @@ library(mvtnorm)
 
   return(list(X=X, B=B, A.indicator=A.indicator))
 }
+#####
 
-#' Title
+#' Title: summary.stat
 #'
 #' @param binary_outcome
 #' @param E
@@ -603,7 +605,7 @@ summary.stat <- function(binary_outcome=FALSE,E=NULL,Y,X,B,A,prescription.mode=s
 }
 
 
-#' Title
+#' Title: generate.data.full
 #'
 #' @param binary_outcome
 #' @param Summ.Stat
