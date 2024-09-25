@@ -2,8 +2,8 @@ rm(list=ls())
 library(foreach)
 library(doParallel)
 
-# source('~/Yuexiang Peng/UW/Research/Jennifer Nelson/Cook/summer project/simu_0817/Final Code/functions.R')
-source('D:/OneDrive - UW/Documents/GitHub/sim.realistic.data/R/sim_functions.R')
+source('~/Yuexiang Peng/UW/Research/Jennifer Nelson/Cook/summer project/simu_0817/Final Code/functions.R')
+source('D:/OneDrive - UW/Documents/GitHub/sim.realistic.data/R/sim_functions_organized.R')
 datdir <- "~/Yuexiang Peng/UW/Research/Jennifer Nelson/Cook/summer project/simu_0817/Data/"
 resdir <- "~/Yuexiang Peng/UW/Research/Jennifer Nelson/Cook/summer project/simu_0817/Result/"
 
@@ -22,9 +22,9 @@ names(sites) <- rep("site", length(sites))
 #### censtype = "simple", "simplebump", "cov", "covbump"
 censtype <- "cov"
 
-## Relax cox fitting settings to run faster
-cox.ctrl <- survival::coxph.control(eps=1e-09, toler.chol=.Machine$double.eps^0.75,
-                                    iter.max=20, toler.inf=sqrt(1e-09), outer.max=10)
+# ## Relax cox fitting settings to run faster
+# cox.ctrl <- survival::coxph.control(eps=1e-09, toler.chol=.Machine$double.eps^0.75,
+#                                     iter.max=20, toler.inf=sqrt(1e-09), outer.max=10)
 tie.method <- "efron" ##"exact"
 
 ## Maximum follow-up Time (i.e. 1 year = 366 days)
@@ -53,6 +53,10 @@ clusterSetRNGStream(cl = cl, iseed = seed1) #Multiple streams of seeds
 Summ.Stat <- NULL
 system.time(
   Summ.Stat <- foreach(site=sites,size=N.sim.site) %dopar% {
+    #test
+    site <- "AEOS"
+    size <- 48127
+
     Y <- E <- X <- comor <- ipvisits <- age_cat <- white <- sex <- dat <- NULL
     SS.list <- NULL
     dat <- readRDS(paste0(datdir,paste0(site,".rds")))
@@ -84,33 +88,38 @@ system.time(
     B <- cbind(ipvisits,ed1plus,comor,sex)
     C <- cbind(age_cat, year=dat$year)
 
-    SS.list <- summary.stat(binary_outcome = TRUE, E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
-                            my.presc.K,tie.method)
+    # test for get.summstat.survival function
+    # SS.list <- get.summstat.survival(E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
+    #                         my.presc.K,tie.method)
+
+    # test for get.summstat.binary function
+    SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C)
+
     SS.list <- append(SS.list, site, after=0)
 
-    norm.spec <- OrdToNorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord)
+    norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord)
 
 
     append(SS.list,list(Corr.norm=norm.spec$corr.norm,
                         Quants.norm=norm.spec$quants.norm,
-                        logHR.X=SS.list$cox.coef.adjusted[[1]],
-                        intercept=SS.list$adj.coef.event[[1]],
+                        #logHR.X=SS.list$cox.coef.adjusted[[1]],
+                        #intercept=SS.list$adj.coef.event[[1]],
                         dat.boot=data.frame(X,Y,E,B,C)))
+
   }
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_20160507_cov_chain_binary.rds")) ## Matthew
-# Summary statistics on all data was saved as
-# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_20160422_cov_chain.rds"))
-
+# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_240924.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 
 
 ## Sample the same dataset that was used for summary statistics.
 ## This will be the basis for boostrap sampling.
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_20160507_cov_chain_binary.rds"))
+# Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_240924.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 names(Summ.Stat) <- sites
 dat.all <- do.call(rbind, lapply(1:5, function(XX) cbind(Summ.Stat[[XX]]$dat.boot,site=XX))) # Matthew: still need numeric
@@ -177,7 +186,7 @@ rownames(ps.boot.site.or) <- prop.labels[1:12]
 # logHR <- list(1.0,1.0,1.5,1.5,2.0,2.0,het,het)
 
 samp.size <- dim(dat.boot)[[1]]
-n.sim <- 625
+n.sim <- 5
 #seed1<-83745 bump
 #seed1<-379 simple
 seed1 <-566390
@@ -192,10 +201,6 @@ start <- proc.time()[3]
 res <- foreach(c=1:n_cores,
                .verbose=TRUE,
                .errorhandling=c('pass'),.packages=c("foreach","survival")) %dopar% {
-
-                 # test
-
-
 
                  sim.estimates <- sapply(1:n.sim,function(XX) NULL)
                  PS.beta.site.norm <- sapply(1:length(sites),function(XX) NULL)
@@ -215,9 +220,7 @@ res <- foreach(c=1:n_cores,
                  common.prob.chain <- sapply(1:n.sim,function(XX) NULL)
                  common.prob.boot <- sapply(1:n.sim,function(XX) NULL)
 
-
                  for (sim in 1:n.sim) {
-
                    sim.dat.norm <- NULL
                    sim.dat.chain <- NULL
                    sim.dat.boot <- NULL
@@ -228,10 +231,19 @@ res <- foreach(c=1:n_cores,
                    cox.chain <- NULL
                    cox.boot <- NULL
 
+                   # # test survival
+                   # ## simulate data using multivariate normal
+                   # sim.dat.norm <- generate.data.survival(Summ.Stat, censtype=censtype, trunc=366)$Data.Simulated # Matthew:
+                   # ## simulate data using covariate chain
+                   # sim.dat.chain <- generate.data.survival(Summ.Stat, censtype=censtype, trunc=366,method=3)$Data.Simulated
+
+                   # test binary
                    ## simulate data using multivariate normal
-                   sim.dat.norm <- generate.data.full(binary_outcome = TRUE, Summ.Stat, censtype=censtype, trunc=366)$Data.Simulated # Matthew:
+                   sim.dat.norm <- generate.data.binary(Summ.Stat, censtype=censtype)$Data.Simulated # Matthew:
                    ## simulate data using covariate chain
-                   sim.dat.chain <- generate.data.full(binary_outcome = TRUE, Summ.Stat, censtype=censtype, trunc=366,method=3)$Data.Simulated
+                   sim.dat.chain <- generate.data.binary(Summ.Stat, censtype=censtype,method=3)$Data.Simulated
+
+
                    sim.dat.boot <- NULL
                    sim.dat.boot0 <- NULL
                    for (site in 1:length(sites)) {
@@ -268,6 +280,21 @@ res <- foreach(c=1:n_cores,
                    PS.beta.boot <- cbind(PS.beta.boot,PS.list.boot[[2]])
 
                    # Matthew: need a binary outcome version. still name as cox for now, change it later
+                   # # test survival version
+                   #
+                   # # test why Y has na
+                   # any(is.na(sim.dat.norm$Y))
+                   # sum(is.na(sim.dat.norm$Y))/length(sim.dat.norm$Y)
+                   #
+                   #
+                   # cox.norm <- cox.est(X=sim.dat.norm$X,Y=sim.dat.norm$Y,E=sim.dat.norm$E,
+                   #                     Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
+                   # cox.chain <- cox.est(X=sim.dat.chain$X,Y=sim.dat.chain$Y,E=sim.dat.chain$E,
+                   #                      Z=sim.dat.chain[,cov.cols],S=sim.dat.chain$site)
+                   # cox.boot <- cox.est(X=sim.dat.boot[,'X'],Y=sim.dat.boot[,'Y'],E=sim.dat.boot[,'E'],
+                   #                     Z=sim.dat.boot[,cov.cols],S=sim.dat.boot[,'site'])
+
+                   # test binary version
                    cox.norm <- logistic.est(X=sim.dat.norm$X,Y=sim.dat.norm$Y,
                                             Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
                    cox.chain <- logistic.est(X=sim.dat.chain$X,Y=sim.dat.chain$Y,
@@ -315,7 +342,7 @@ end <- proc.time()[3]
 end-start
 
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525_Matthew_binary.rds"))
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_240924.rds"))
 # saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525.rds")) #check1
 
 # res <- readRDS(paste0(resdir,"angio_datasim_simple_2016_0525.rds")) # Matthew: where does this data come from? what is the difference between this and the previous data?
@@ -343,29 +370,28 @@ comb.coef <- function(margin=1, m1,m2,m3) {
 }
 
 
-interleave <- function(m1,m2)
-{
+interleave <- function(m1,m2){
   ord1 <- 2*(1:dim(m1)[[2]])-1
   ord2 <- 2*(1:dim(m2)[[2]])
   cbind(m1,m2)[,order(c(ord1,ord2))]
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_2016_0525_Matthew_binary.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_240924.rds"))
 
 
-carr.norm <- array(NA,dim=c(11,11,625))
-carr.chain <- array(NA,dim=c(11,11,625))
-carr.boot <- array(NA,dim=c(11,11,625))
+carr.norm <- array(NA,dim=c(11,11,5))
+carr.chain <- array(NA,dim=c(11,11,5))
+carr.boot <- array(NA,dim=c(11,11,5))
 
 cprob.norm <- 0
 cprob.chain <- 0
 cprob.boot <- 0
-for (i in 1:8) {
-  for (j in 1:625) {
+for (i in 1:8) { # TODO: may change to the core number
+  for (j in 1:5) {
     carr.norm[,,j] <- res[[i]]$common.prob.norm[[j]]
-    carr.chain[,,j] <- res[[i]]$common.prob.norm[[j]]
-    carr.boot[,,j] <- res[[i]]$common.prob.norm[[j]]
+    carr.chain[,,j] <- res[[i]]$common.prob.chain[[j]]
+    carr.boot[,,j] <- res[[i]]$common.prob.boot[[j]]
     cprob.norm <- cprob.norm + res[[i]]$common.prob.norm[[j]]
     cprob.chain <- cprob.chain + res[[i]]$common.prob.chain[[j]]
     cprob.boot <- cprob.boot + res[[i]]$common.prob.boot[[j]]
@@ -528,7 +554,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_0924.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -554,7 +580,9 @@ test <- comb.coef(margin=1,o1,o2,o3)
 
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
-tiff(paste0(resdir,"Logit_coeff.tif"),width=10,height=7,units='in',res=300)
+
+tiff(paste0(resdir,"Cox_coeff_package_version_0924.tif"),width=10,height=7,units='in',res=300)
+# tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 axis(side=2,cex.axis=0.85)
