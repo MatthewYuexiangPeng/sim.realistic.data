@@ -138,14 +138,14 @@ system.time(
 
     # test for get.summstat.survival function
     SS.list <- get.summstat.survival(E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
-                            my.presc.K,tie.method)
+                                     my.presc.K,tie.method)
 
     # test for get.summstat.binary function
     # SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C)
 
     SS.list <- append(SS.list, site, after=0)
 
-    norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord)
+    norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord) # Q: didn't use this generated variable
 
 
     append(SS.list,list(Corr.norm=norm.spec$corr.norm,
@@ -397,7 +397,7 @@ rownames(ps.boot.site.or) <- prop.labels[1:12]
 
 # no parallel version ----
 samp.size <- dim(dat.boot)[[1]]
-n.sim <- 625
+n.sim <- 125
 # seed1<-83745 bump
 # seed1<-379 simple
 seed1 <- 566391
@@ -430,8 +430,11 @@ for (c in 1:n_cores) {
   common.prob.boot <- sapply(1:n.sim, function(XX) NULL)
 
   for (sim in 1:n.sim) {
-    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366)$Data.Simulated
-    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 3)$Data.Simulated # 3
+    # test binary
+    ## simulate data using multivariate normal
+    sim.dat.norm <- generate.data.binary(Summ.Stat, censtype=censtype)$Data.Simulated # Matthew:
+    ## simulate data using covariate chain
+    sim.dat.chain <- generate.data.binary(Summ.Stat, censtype=censtype,method=3)$Data.Simulated
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL
@@ -467,12 +470,12 @@ for (c in 1:n_cores) {
     PS.beta.chain <- cbind(PS.beta.chain, PS.list.chain[[2]])
     PS.beta.boot <- cbind(PS.beta.boot, PS.list.boot[[2]])
 
-    cox.norm <- cox.est(X = sim.dat.norm$X, Y = sim.dat.norm$Y, E = sim.dat.norm$E,
-                        Z = sim.dat.norm[, cov.cols], S = sim.dat.norm$site)
-    cox.chain <- cox.est(X = sim.dat.chain$X, Y = sim.dat.chain$Y, E = sim.dat.chain$E,
-                         Z = sim.dat.chain[, cov.cols], S = sim.dat.chain$site)
-    cox.boot <- cox.est(X = sim.dat.boot[, 'X'], Y = sim.dat.boot[, 'Y'], E = sim.dat.boot[, 'E'],
-                        Z = sim.dat.boot[, cov.cols], S = sim.dat.boot[, 'site'])
+    cox.norm <- logistic.est(X=sim.dat.norm$X,Y=sim.dat.norm$Y,
+                             Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
+    cox.chain <- logistic.est(X=sim.dat.chain$X,Y=sim.dat.chain$Y,
+                              Z=sim.dat.chain[,cov.cols],S=sim.dat.chain$site)
+    cox.boot <- logistic.est(X=sim.dat.boot[,'X'],Y=sim.dat.boot[,'Y'],
+                             Z=sim.dat.boot[,cov.cols],S=sim.dat.boot[,'site'])
 
     for (k in 1:5) {
       if (!is.null(cox.norm$Site.Specific[[k]])) {
@@ -520,7 +523,7 @@ end <- proc.time()[3]
 end - start
 #####
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_241006.rds"))
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_binary_241007.rds"))
 # saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525.rds")) #check1
 
 # res <- readRDS(paste0(resdir,"angio_datasim_simple_2016_0525.rds")) # Matthew: where does this data come from? what is the difference between this and the previous data?
@@ -555,18 +558,18 @@ interleave <- function(m1,m2){
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_241006.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_binary_241007.rds"))
 
 
-carr.norm <- array(NA,dim=c(11,11,625))
-carr.chain <- array(NA,dim=c(11,11,625))
-carr.boot <- array(NA,dim=c(11,11,625))
+carr.norm <- array(NA,dim=c(11,11,125))
+carr.chain <- array(NA,dim=c(11,11,125))
+carr.boot <- array(NA,dim=c(11,11,125))
 
 cprob.norm <- 0
 cprob.chain <- 0
 cprob.boot <- 0
 for (i in 1:16) { # TODO: may change to the core number
-  for (j in 1:625) {
+  for (j in 1:125) {
     carr.norm[,,j] <- res[[i]]$common.prob.norm[[j]]
     carr.chain[,,j] <- res[[i]]$common.prob.chain[[j]]
     carr.boot[,,j] <- res[[i]]$common.prob.boot[[j]]
@@ -590,31 +593,31 @@ rownames(PS.coef.summ) <- c("Intercept","1+ IP Visits","1+ ED Visits",
                             "1+ Comorbid Score","Sex","Age 45-54","Age 55-64",
                             "Age 65+","2009","2010","2011","2012")
 
-Out.coef.summ <- do.call(cbind,lapply(Summ.Stat, # Matthew: TODO
-                                      function(XX) -XX$adj.coef.event/XX$adj.scale.event))
-Out.coef.summ.cox <- do.call(cbind,lapply(Summ.Stat, # Matthew: TODO
-                                          function(XX) XX$cox.coef.adjusted))
-rownames(Out.coef.summ) <- c("Intercept","X", "1+ IP Visits","1+ ED Visits", # Matthew: TODO
-                             "1+ Comorbid Score","Sex","Age 45-54","Age 55-64",
-                             "Age 65+","2009","2010","2011","2012") # Matthew: Add "X" here.
-
-Table.descr <- do.call("rbind", # Matthew: TODO
-                       lapply(Summ.Stat,
-                              function(XX) {
-                                temp <- cbind(N=XX$N.X,
-                                              P_Time=round(XX$P.time,1),
-                                              Events=c(XX$control.events,
-                                                       XX$compare.events),
-                                              "Rates"=round(c(1000*365.25*XX$control.rate,
-                                                              1000*365.25*XX$compare.rate),3))
-                                data.frame(Drug=c('BB','ACEI'), temp)
-                              }))
-site.col <- rep("", times=2*length(c("Site 1","Site 2","Site 3","Site 4","Site 5")))
-site.col[c(1,3,5,7,9)] <-  toupper(c("Site 1","Site 2","Site 3","Site 4","Site 5"))
-Table.descr <- data.frame(Site=site.col,Table.descr)
-
-Table.descr_new <- as.data.frame(lapply(Table.descr, as.character),
-                                 stringsAsFactors = FALSE)
+# Out.coef.summ <- do.call(cbind,lapply(Summ.Stat, # Matthew: TODO
+#                                       function(XX) -XX$adj.coef.event/XX$adj.scale.event))
+# Out.coef.summ.cox <- do.call(cbind,lapply(Summ.Stat, # Matthew: TODO
+#                                           function(XX) XX$cox.coef.adjusted))
+# rownames(Out.coef.summ) <- c("Intercept","X", "1+ IP Visits","1+ ED Visits", # Matthew: TODO
+#                              "1+ Comorbid Score","Sex","Age 45-54","Age 55-64",
+#                              "Age 65+","2009","2010","2011","2012") # Matthew: Add "X" here.
+#
+# Table.descr <- do.call("rbind", # Matthew: TODO
+#                        lapply(Summ.Stat,
+#                               function(XX) {
+#                                 temp <- cbind(N=XX$N.X,
+#                                               P_Time=round(XX$P.time,1),
+#                                               Events=c(XX$control.events,
+#                                                        XX$compare.events),
+#                                               "Rates"=round(c(1000*365.25*XX$control.rate,
+#                                                               1000*365.25*XX$compare.rate),3))
+#                                 data.frame(Drug=c('BB','ACEI'), temp)
+#                               }))
+# site.col <- rep("", times=2*length(c("Site 1","Site 2","Site 3","Site 4","Site 5")))
+# site.col[c(1,3,5,7,9)] <-  toupper(c("Site 1","Site 2","Site 3","Site 4","Site 5"))
+# Table.descr <- data.frame(Site=site.col,Table.descr)
+#
+# Table.descr_new <- as.data.frame(lapply(Table.descr, as.character),
+#                                  stringsAsFactors = FALSE)
 
 Cat.dist <-  lapply(Summ.Stat, function(XX) {
   temp<- as.matrix(unlist(XX$P.ord))
@@ -628,70 +631,70 @@ Cat.dist <-  lapply(Summ.Stat, function(XX) {
 merged.data.frame <- Reduce(function(...) merge(..., by='id', all=TRUE), Cat.dist)
 table.proportions <- merged.data.frame[order(trimws(merged.data.frame$id)),]
 
-Converted.weib <- lapply(Summ.Stat, function(XX) {  # Matthew: TODO
-  if ("Log(scale)"%in%rownames(XX$adj.vcov.event)) {
-    temp.grad <- c(-1/(XX$adj.scale.event), XX$adj.coef.event[["X"]]/XX$adj.scale.event)
-    temp.vcov <- XX$adj.vcov.event[c("ZX","Log(scale)"),c("ZX","Log(scale)")]
-    vcov.new <- temp.grad %*% temp.vcov %*% temp.grad
-    temp.est <- -XX$adj.coef.event[["X"]]/(XX$adj.scale.event)
-  } else {
-    temp.vcov <- XX$adj.vcov.event[c("ZX"),c("ZX")]
-    vcov.new <- XX$adj.vcov.event[c("ZX"),c("ZX")]
-    temp.est <- -XX$adj.coef.event[["X"]]/(XX$adj.scale.event)
-  }
+# Converted.weib <- lapply(Summ.Stat, function(XX) {  # Matthew: TODO
+#   if ("Log(scale)"%in%rownames(XX$adj.vcov.event)) {
+#     temp.grad <- c(-1/(XX$adj.scale.event), XX$adj.coef.event[["X"]]/XX$adj.scale.event)
+#     temp.vcov <- XX$adj.vcov.event[c("ZX","Log(scale)"),c("ZX","Log(scale)")]
+#     vcov.new <- temp.grad %*% temp.vcov %*% temp.grad
+#     temp.est <- -XX$adj.coef.event[["X"]]/(XX$adj.scale.event)
+#   } else {
+#     temp.vcov <- XX$adj.vcov.event[c("ZX"),c("ZX")]
+#     vcov.new <- XX$adj.vcov.event[c("ZX"),c("ZX")]
+#     temp.est <- -XX$adj.coef.event[["X"]]/(XX$adj.scale.event)
+#   }
+#
+#
+#   exp(c(temp.est, temp.est +
+#           c(qnorm(0.025),qnorm(0.975))*sqrt(vcov.new)))
+# })
+# # names(Converted.weib) <- site_mask # Matthew: not nessesary?
+# Converted.weib <- do.call(rbind, Converted.weib)
 
+# Cox.estimates <- lapply(Summ.Stat, function(XX) { # Matthew: TODO
+#   vname <- substr(XX[[1]],1,4)
+#   temp.vcov <- XX$cox.vcov[1,1]
+#   temp.est <- XX$cox.coef.adjusted[[1]]
+#
+#   exp(c(temp.est, temp.est +
+#           c(qnorm(0.025),qnorm(0.975))*sqrt(temp.vcov)))
+# })
+# merged.cox.coefs <- do.call(rbind, Cox.estimates)
 
-  exp(c(temp.est, temp.est +
-          c(qnorm(0.025),qnorm(0.975))*sqrt(vcov.new)))
-})
-# names(Converted.weib) <- site_mask # Matthew: not nessesary?
-Converted.weib <- do.call(rbind, Converted.weib)
-
-Cox.estimates <- lapply(Summ.Stat, function(XX) { # Matthew: TODO
-  vname <- substr(XX[[1]],1,4)
-  temp.vcov <- XX$cox.vcov[1,1]
-  temp.est <- XX$cox.coef.adjusted[[1]]
-
-  exp(c(temp.est, temp.est +
-          c(qnorm(0.025),qnorm(0.975))*sqrt(temp.vcov)))
-})
-merged.cox.coefs <- do.call(rbind, Cox.estimates)
-
-interleave <- function(m1,m2)
-{
-  ord1 <- 2*(1:dim(m1)[[1]])-1
-  ord2 <- 2*(1:dim(m2)[[1]])
-  rbind(m1,m2)[order(c(ord1,ord2)),]
-}
-main.effect <- interleave(Converted.weib,merged.cox.coefs)
-
-main.effect <- main.effect[-c(10:9),]
-
-site_mask <- sites
-op <- par(mar=c(5.1,6.1,4.1,1.1),adj=.5)
-y.lab.points <- seq(7,1,by=-2) + 0.5
-lab.points <- c(7.75,
-                7.25,5.75,5.25,3.75,3.25,1.75,1.25)
-plot(main.effect[,1],lab.points, axes=FALSE, pch=15,
-     col=c("tomato","steelblue"), ylab='',
-     xlab = "Estimated HR and 95% CI",
-     xlim=c(min(main.effect[,2],na.rm=TRUE)-0.5,
-            max(main.effect[,3],na.rm=TRUE)+.5), ylim = c(0,9.5))
-axis(side=2, lwd=0,at=y.lab.points, labels=trimws(toupper(site_mask[-5])), las=1,
-     cex.axis=0.80, hadj=0.5)
-axis(side=1,cex.axis=0.85,at=c(1:12))
-cols <- rep(c("tomato","steelblue"),times=9)
-abline(v=1,lty=2)
-for (i in 8:1) {
-  lines(c(main.effect[9-i,2],main.effect[9-i,3]),
-        c(lab.points[[9-i]],lab.points[[9-i]]),
-        col= cols[[9-i]], lwd=2)
-}
-points(8.5,7,pch=15,col="tomato")
-points(8.5,6.5,pch=15,col="steelblue")
-text(8.6,7,"Weibull",pos=4,cex=0.9)
-text(8.6,6.5,"Cox",pos=4,cex=0.9)
-par(op)
+# interleave <- function(m1,m2)
+# {
+#   ord1 <- 2*(1:dim(m1)[[1]])-1
+#   ord2 <- 2*(1:dim(m2)[[1]])
+#   rbind(m1,m2)[order(c(ord1,ord2)),]
+# }
+# main.effect <- interleave(Converted.weib,merged.cox.coefs)
+#
+# main.effect <- main.effect[-c(10:9),]
+#
+# site_mask <- sites
+# op <- par(mar=c(5.1,6.1,4.1,1.1),adj=.5)
+# y.lab.points <- seq(7,1,by=-2) + 0.5
+# lab.points <- c(7.75,
+#                 7.25,5.75,5.25,3.75,3.25,1.75,1.25)
+# plot(main.effect[,1],lab.points, axes=FALSE, pch=15,
+#      col=c("tomato","steelblue"), ylab='',
+#      xlab = "Estimated HR and 95% CI",
+#      xlim=c(min(main.effect[,2],na.rm=TRUE)-0.5,
+#             max(main.effect[,3],na.rm=TRUE)+.5), ylim = c(0,9.5))
+# axis(side=2, lwd=0,at=y.lab.points, labels=trimws(toupper(site_mask[-5])), las=1,
+#      cex.axis=0.80, hadj=0.5)
+# axis(side=1,cex.axis=0.85,at=c(1:12))
+# cols <- rep(c("tomato","steelblue"),times=9)
+# abline(v=1,lty=2)
+# for (i in 8:1) {
+#   lines(c(main.effect[9-i,2],main.effect[9-i,3]),
+#         c(lab.points[[9-i]],lab.points[[9-i]]),
+#         col= cols[[9-i]], lwd=2)
+# }
+# points(8.5,7,pch=15,col="tomato")
+# points(8.5,6.5,pch=15,col="steelblue")
+# text(8.6,7,"Weibull",pos=4,cex=0.9)
+# text(8.6,6.5,"Cox",pos=4,cex=0.9)
+# par(op)
 
 
 op <- par(mar=c(4,3,3,1))
@@ -732,7 +735,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity_package_version_1006.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_binary_1007.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -759,7 +762,7 @@ test <- comb.coef(margin=1,o1,o2,o3)
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
 
-tiff(paste0(resdir,"Cox_coeff_package_version_1006.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"Cox_coeff_package_version_binary_1007.tif"),width=10,height=7,units='in',res=300)
 # tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)

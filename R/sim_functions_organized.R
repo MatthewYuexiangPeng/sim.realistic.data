@@ -359,54 +359,6 @@ get.summstat.binary <- function(Y,X,B,A)
   retval - 1
 }
 
-.ordtonorm <- function (probs, Cor) {
-  q = length(probs)
-  categ_probs = 0
-  cumul_probs = list(0)
-  quant_probs = list(0)
-  means = 0
-  vars = 0
-  var.wt = function(x, w) {
-    m = weighted.mean(x = x, w = w)
-    sum((x[1:length(x)] - m)^2 * w[1:length(x)])
-  }
-  for (i in 1:q) {
-    categ_probs[i] = length(probs[[i]])
-    cumul_probs[[i]] = cumsum(1:categ_probs[i]/10^12 + probs[[i]])
-    cumul_probs[[i]][categ_probs[i]] = 1
-    quant_probs[[i]] = qnorm(p = cumul_probs[[i]], mean = 0,
-                             sd = 1)
-    means[i] = weighted.mean(x = 1:categ_probs[i], w = probs[[i]])
-    vars[i] = var.wt(x = 1:categ_probs[i], w = probs[[i]])
-  }
-  Cor_norm = Cor
-  for (i in 1:(q - 1)) {
-    for (j in (i + 1):q) {
-      gridd = rep(0, times = 201)
-      for (ci in 1:(categ_probs[i] - 1)) {
-        for (cj in 1:(categ_probs[j] - 1)) {
-          for (steps in -100:100) {
-            gridd[101 + steps] = gridd[101 + steps] +
-              mvtnorm::pmvnorm(upper = c(quant_probs[[i]][ci],
-                                         quant_probs[[j]][cj]), corr = matrix(2,
-                                                                              2, data = c(1, steps/100, steps/100,
-                                                                                          1)))[1]
-          }
-        }
-      }
-      f = suppressWarnings(approxfun(y = -100:100/100,
-                                     x = gridd))
-      Cor_norm[i, j] = Cor_norm[j, i] = f(Cor[i, j] * sqrt(vars[i] *
-                                                             vars[j]) + means[i] * means[j] - categ_probs[i] *
-                                            categ_probs[j] + categ_probs[j] * sum(cumul_probs[[i]][1:(categ_probs[i] -
-                                                                                                        1)]) + categ_probs[i] * sum(cumul_probs[[j]][1:(categ_probs[j] -
-                                                                                                                                                          1)]))
-    }
-  }
-  return(list('corr.norm'=Cor_norm,'quants.norm'=quant_probs))
-
-}
-
 .gencov <- function(n, P, Common.P, coef.AonB, coef.XonZ){
   B <- bindata::rmvbin(n, margprob=P, commonprob=Common.P)
 
@@ -427,7 +379,8 @@ get.summstat.binary <- function(Y,X,B,A)
   {
     for(i in 2:length(coef.AonB))
     {
-      P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) )
+      # P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) )
+      P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) )
       P.A2 <- cbind(rep(1,n),P.A2)
       P.A2 <- P.A2/apply(P.A2,1,sum) # gives same result as fitted(multinom(age ~ z + x))
 
@@ -512,7 +465,7 @@ get.summstat.binary <- function(Y,X,B,A)
   {
     for(i in 2:length(coef.AonB))
     {
-      P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) ) # Matthew: exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) ) Question: want to regress A[2] on A[1]?
+      P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) ) # Matthew: Q: exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) ) Question: want to regress A[2] on A[1]?
       P.A2 <- cbind(rep(1,n),P.A2)
       P.A2 <- P.A2/apply(P.A2,1,sum) # gives same result as fitted(multinom(age ~ z + x))
 
@@ -613,7 +566,7 @@ get.summstat.binary <- function(Y,X,B,A)
   ### Event time
   ue <- runif(n)
 
-  # TODO: 9.24 coef.event has a na column, need to find why
+  # TODO: 9.24 adj.coef.event has a na column, need to find why. KPNC, cat_level2012
   if (length(scale.event)==1) {
     eventT <- ceiling((-log(ue) * exp( cbind(1,X,Z.model.data) %*% coef.event / scale.event )) ^ (scale.event))
     if (!is.null(X)) {
@@ -810,7 +763,7 @@ generate.data.survival <- function(Summ.Stat,hetero=0,censtype="simple", trunc=3
       method = method, Corr.norm = Corr.norm, Quant.norm = Quant.norm, P.ord = P.ord
     )
 
-    # TODO: method 2, 3, 4 not working?
+    # TODO: method 4 need to be tested
 
     if(is.null(DS)) stop("Censoring type is misspecified")
 
@@ -870,7 +823,7 @@ generate.data.binary <- function(Summ.Stat,hetero=0,censtype="simple", trunc=365
 }
 
 
-# TODO: (1) debug, make these functions able to replicate previous plot (survival+binary)
-# (2) check all the 4 methods in the survival functions can work
+# TODO: (1) debug, make these functions able to replicate previous plot (survival+binary): done
+# (2) check all the 4 methods in the survival functions can work: done,except for method 4 which require user data
 # (3) think about how to edit the Hazard ratio, probably in the .gendata.survival function.
 # (4) add notations critical for the package
