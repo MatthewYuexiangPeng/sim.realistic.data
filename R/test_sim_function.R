@@ -158,7 +158,7 @@ system.time(
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241005.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241008.rds")) ## Matthew
 # saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 
@@ -166,7 +166,7 @@ saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241005.rds")) 
 ## Sample the same dataset that was used for summary statistics.
 ## This will be the basis for boostrap sampling.
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241005.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241008.rds"))
 # Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 names(Summ.Stat) <- sites

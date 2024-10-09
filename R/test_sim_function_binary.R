@@ -137,11 +137,11 @@ system.time(
     C <- cbind(age_cat, year=dat$year)
 
     # test for get.summstat.survival function
-    SS.list <- get.summstat.survival(E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
-                                     my.presc.K,tie.method)
+    # SS.list <- get.summstat.survival(E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
+                                     # my.presc.K,tie.method)
 
     # test for get.summstat.binary function
-    # SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C)
+    SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C)
 
     SS.list <- append(SS.list, site, after=0)
 
@@ -158,16 +158,16 @@ system.time(
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241005.rds")) ## Matthew
-# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
+# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241008.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241008.rds"))
 
 
 
 ## Sample the same dataset that was used for summary statistics.
 ## This will be the basis for boostrap sampling.
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241005.rds"))
-# Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
+# Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241005.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_241008.rds"))
 
 names(Summ.Stat) <- sites
 dat.all <- do.call(rbind, lapply(1:5, function(XX) cbind(Summ.Stat[[XX]]$dat.boot,site=XX))) # Matthew: still need numeric
@@ -432,9 +432,9 @@ for (c in 1:n_cores) {
   for (sim in 1:n.sim) {
     # test binary
     ## simulate data using multivariate normal
-    sim.dat.norm <- generate.data.binary(Summ.Stat, censtype=censtype)$Data.Simulated # Matthew:
+    sim.dat.norm <- generate.data.binary(Summ.Stat)$Data.Simulated # Matthew:
     ## simulate data using covariate chain
-    sim.dat.chain <- generate.data.binary(Summ.Stat, censtype=censtype,method=3)$Data.Simulated
+    sim.dat.chain <- generate.data.binary(Summ.Stat,method=3)$Data.Simulated
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL

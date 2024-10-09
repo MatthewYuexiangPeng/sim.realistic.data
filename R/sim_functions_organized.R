@@ -1,7 +1,6 @@
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
-                         my.presc.K=1,tie.method="efron",interact=FALSE)
-{
+                         my.presc.K=1,tie.method="efron",interact=FALSE){
   if (is.null(E)){
     stop("E is required for survival data")
   }
@@ -64,28 +63,59 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
 
   ####################################
   #### Chain of coef for B
-  coef.chain = vector("list", n.B)
+  coef.chain <- vector("list", n.B)
   names(coef.chain) <- colnames(B)
-  coef.chain[[1]] = mean(B[,1])
-  for(i in 2:n.B){
-    coef.chain[[i]] = coef(glm(B[,i]~B[,1:(i-1)],family="binomial"))
+  coef.chain[[1]] <- mean(B[,1])
+  for (i in 2:n.B) {
+    coef.chain[[i]] <- tryCatch({
+      coef(glm(B[,i] ~ B[, 1:(i-1)], family = "binomial"))
+    }, error = function(e) {
+      message("Chain regression failed for B[", i, "]: ", e$message)
+      NA
+    })
   }
-
 
   #### Coef for relationship between binary and categorical confounders
+
   coef.AonB <- vector("list", n.A)
   names(coef.AonB) <- colnames(A)
-  # Multinomial model for the first categorical variable and binary confounders
-  coef.AonB[[1]] <- coef(nnet::multinom(A[,1] ~ B,trace=F))
-  # Fits Multinomial Model if more than one categorical variable
-  # Matthew: add the following
-  if(n.A>1)
-  {
-    for(i in 2:n.A)
-    {
-      coef.AonB[[i]] <- coef(nnet::multinom(A[,i] ~ B,trace=F))
+
+  # For the first categorical variable, regress on all B variables
+  coef.AonB[[1]] <- tryCatch({
+    coef(nnet::multinom(A[, 1] ~ B, trace = FALSE))
+  }, error = function(e) {
+    message("Model fitting failed for A[1]: ", e$message)
+    NA
+  })
+
+  # For subsequent categorical variables, regress on the indicators of previous categorical variables and B
+  if (n.A > 1) {
+    for (i in 2:n.A) {
+      # Get the corresponding indicator columns for all previous categorical variables
+      start_index <- 1
+      end_index <- sum(sapply(1:(i - 1), function(k) length(unique(A[, k])) - 1))
+
+      # Extract the relevant indicator columns
+      previous_A_indicators <- A.indicator[, start_index:end_index, drop = FALSE]
+
+      # Create a formula using previous indicators and B as predictors
+      formula <- as.formula(paste("A[, i] ~ . + B"))  # Use . to represent all predictors
+
+      # Fit the multinomial logistic regression model, catch errors due to mismatched rows or other issues
+      coef.AonB[[i]] <- tryCatch({
+        model_data <- data.frame(A = A[, i], previous_A_indicators, B)
+        model <- nnet::multinom(A ~ ., data = model_data, trace = FALSE)
+        coef(model)
+      }, warning = function(w) {
+        message("Warning during model fitting for A[", i, "]: ", w$message)
+        NA
+      }, error = function(e) {
+        message("Model fitting failed for A[", i, "]: ", e$message)
+        NA
+      })
     }
   }
+
 
   ####################################
 
@@ -230,8 +260,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   ))
 }
 
-get.summstat.binary <- function(Y,X,B,A)
-{
+get.summstat.binary <- function(Y,X,B,A){
   glm.ctrl <- glm.control(epsilon = 1e-8, maxit = 25, trace = FALSE)
 
   ### (Correlated) binary covariates B
@@ -243,7 +272,7 @@ get.summstat.binary <- function(Y,X,B,A)
   #### Common probability, i.e. number of one's shared by each pair of binary variables divided by sample size
   Common.P <- t(as.matrix(B))%*%as.matrix(B)/nrow(B)
 
-  ### Categorical variables A
+  ## Categorical variables A
   #### Intercept and coefficients from multinomial regression for categorical variables, fitted on all binary covariates B.
   #### Number of categorical
   A <- as.matrix(A)
@@ -284,31 +313,61 @@ get.summstat.binary <- function(Y,X,B,A)
     colnames(A.indicator) <- catlabs
   }
 
-
   ####################################
   #### Chain of coef for B
-  coef.chain = vector("list", n.B)
+  coef.chain <- vector("list", n.B)
   names(coef.chain) <- colnames(B)
-  coef.chain[[1]] = mean(B[,1])
-  for(i in 2:n.B){
-    coef.chain[[i]] = coef(glm(B[,i]~B[,1:(i-1)],family="binomial"))
+  coef.chain[[1]] <- mean(B[,1])
+  for (i in 2:n.B) {
+    coef.chain[[i]] <- tryCatch({
+      coef(glm(B[,i] ~ B[, 1:(i-1)], family = "binomial"))
+    }, error = function(e) {
+      message("Chain regression failed for B[", i, "]: ", e$message)
+      NA
+    })
   }
-
 
   #### Coef for relationship between binary and categorical confounders
+
   coef.AonB <- vector("list", n.A)
   names(coef.AonB) <- colnames(A)
-  # Multinomial model for the first categorical variable and binary confounders
-  coef.AonB[[1]] <- coef(nnet::multinom(A[,1] ~ B,trace=F))
-  # Fits Multinomial Model if more than one categorical variable
-  # Matthew: add the following
-  if(n.A>1)
-  {
-    for(i in 2:n.A)
-    {
-      coef.AonB[[i]] <- coef(nnet::multinom(A[,i] ~ B,trace=F))
+
+  # For the first categorical variable, regress on all B variables
+  coef.AonB[[1]] <- tryCatch({
+    coef(nnet::multinom(A[, 1] ~ B, trace = FALSE))
+  }, error = function(e) {
+    message("Model fitting failed for A[1]: ", e$message)
+    NA
+  })
+
+  # For subsequent categorical variables, regress on the indicators of previous categorical variables and B
+  if (n.A > 1) {
+    for (i in 2:n.A) {
+      # Get the corresponding indicator columns for all previous categorical variables
+      start_index <- 1
+      end_index <- sum(sapply(1:(i - 1), function(k) length(unique(A[, k])) - 1))
+
+      # Extract the relevant indicator columns
+      previous_A_indicators <- A.indicator[, start_index:end_index, drop = FALSE]
+
+      # Create a formula using previous indicators and B as predictors
+      formula <- as.formula(paste("A[, i] ~ . + B"))  # Use . to represent all predictors
+
+      # Fit the multinomial logistic regression model, catch errors due to mismatched rows or other issues
+      coef.AonB[[i]] <- tryCatch({
+        model_data <- data.frame(A = A[, i], previous_A_indicators, B)
+        model <- nnet::multinom(A ~ ., data = model_data, trace = FALSE)
+        coef(model)
+      }, warning = function(w) {
+        message("Warning during model fitting for A[", i, "]: ", w$message)
+        NA
+      }, error = function(e) {
+        message("Model fitting failed for A[", i, "]: ", e$message)
+        NA
+      })
     }
   }
+
 
   ####################################
 
@@ -379,8 +438,8 @@ get.summstat.binary <- function(Y,X,B,A)
   {
     for(i in 2:length(coef.AonB))
     {
-      # P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) )
-      P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) )
+      P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) )
+      # P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) )
       P.A2 <- cbind(rep(1,n),P.A2)
       P.A2 <- P.A2/apply(P.A2,1,sum) # gives same result as fitted(multinom(age ~ z + x))
 
@@ -465,7 +524,7 @@ get.summstat.binary <- function(Y,X,B,A)
   {
     for(i in 2:length(coef.AonB))
     {
-      P.A2 <- exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) ) # Matthew: Q: exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) ) Question: want to regress A[2] on A[1]?
+      P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) ) # Matthew: Q: exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) ) Question: want to regress A[2] on A[1]?
       P.A2 <- cbind(rep(1,n),P.A2)
       P.A2 <- P.A2/apply(P.A2,1,sum) # gives same result as fitted(multinom(age ~ z + x))
 
@@ -640,6 +699,22 @@ get.summstat.binary <- function(Y,X,B,A)
                                 coef.chain=NULL, user.data=NULL,noX=FALSE,
                                 coef.Yon1, coef.YonX, coef.YonZ)
 {
+  # test 10.8
+  # n=SS$n
+  # P=SS$P
+  # Common.P=SS$Common.P
+  # coef.XonZ=SS$coef.XonZ
+  # coef.chain=SS$Coef.bin
+  # coef.AonB=SS$Coef.cat
+  # method=method
+  # Corr.norm=SS$Corr.norm
+  # Quant.norm=SS$Quants.norm
+  # P.ord=SS$P.ord
+  # coef.Yon1=SS$coef.Yon1
+  # coef.YonX=SS$coef.YonX
+  # coef.YonZ=SS$coef.YonZ
+
+
   if (is.null(coef.Yon1) || is.null(coef.YonX) || is.null(coef.YonZ)) {
     stop("For binary outcome, coef.Yon1, coef.YonX, and coef.YonZ must be specified")
   }
@@ -659,22 +734,6 @@ get.summstat.binary <- function(Y,X,B,A)
                         },
                         stop("Invalid method specified")
   )
-
-  # if (method == 1) {
-  #   exppluscovs <- generate.cov.ord(n, P.ord, Quant.norm, Corr.norm, coef.XonZ)
-  # } else if (method==2) {
-  #   exppluscovs <- generate.cov(n, P, Common.P, coef.AonB, coef.XonZ)
-  # } else if (method==3) {
-  #   exppluscovs <- generate.cov.chain(n, coef.chain, coef.AonB, coef.XonZ)
-  # } else if (method==4) {
-  #   exppluscovs <- list(B=NULL,A.indicator=NULL)
-  #   exppluscovs$A.indicator <- user.data[,-c(1)]
-  #   if(noX) {
-  #     exppluscovs$X <- NULL
-  #   } else {
-  #     exppluscovs$X <- user.data[,1]
-  #   }
-  # }
 
   ### Confounders Z
   Z.model.data <- cbind(exppluscovs$B, exppluscovs$A.indicator)
@@ -702,8 +761,7 @@ get.summstat.binary <- function(Y,X,B,A)
 
 
 # Functions for generating data ----
-generate.data.survival <- function(Summ.Stat,hetero=0,censtype="simple", trunc=365,method=1)
-{
+generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1){
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -783,8 +841,7 @@ generate.data.survival <- function(Summ.Stat,hetero=0,censtype="simple", trunc=3
 }
 
 
-generate.data.binary <- function(Summ.Stat,hetero=0,censtype="simple", trunc=365,method=1)
-{
+generate.data.binary <- function(Summ.Stat,method=1){
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -801,7 +858,7 @@ generate.data.binary <- function(Summ.Stat,hetero=0,censtype="simple", trunc=365
     SS <- Summ.Stat[[i]]
     ## generate site specific data
 
-    # TODO: method 2, 3, 4 not working?
+    # TODO: method 4 working?
 
     DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
                          coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
@@ -824,6 +881,7 @@ generate.data.binary <- function(Summ.Stat,hetero=0,censtype="simple", trunc=365
 
 
 # TODO: (1) debug, make these functions able to replicate previous plot (survival+binary): done
-# (2) check all the 4 methods in the survival functions can work: done,except for method 4 which require user data
-# (3) think about how to edit the Hazard ratio, probably in the .gendata.survival function.
-# (4) add notations critical for the package
+# (2) check all the 4 methods in the survival functions can work: done, except for method 4 which require user data
+# (3) Fixed the issue that categorical variables did not regress on previous categorical variables: done
+# (4) think about how to edit the Hazard ratio, probably in the .gendata.survival function.
+# (5) add notations critical for the package
