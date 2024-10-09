@@ -418,6 +418,48 @@ get.summstat.binary <- function(Y,X,B,A){
   retval - 1
 }
 
+
+.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){
+
+  Z <- .ordgendata(n, sigma=Corr.norm, quants.norm=Quant.norm)
+  n.B <- length(which(unlist(lapply(P.ord,FUN=function(x){length(x)})==2)))
+  n.A <- ncol(Z) - n.B
+
+  if (n.B > 0 ) {
+    B <- Z[, 1:n.B, drop=FALSE]
+    colnames(B) <- paste0('bin', 1:n.B)
+  }
+
+  if(n.A>0)
+  {
+    A <- Z[,(n.B+1):ncol(Z)]
+    A.indicator <- NULL
+    catlabs <- NULL
+    for(i in 1:n.A)
+    {
+      dummy <- NULL
+      levels <- sort(unique(A[,i]))
+      for(level in levels[-1]) {
+        catlabs <- c(catlabs, paste0('cat',i,'_','level',level))
+        dummy <- cbind(dummy, A[,i]==level)
+      }
+      A.indicator <- cbind(A.indicator, dummy)
+    }
+    colnames(A.indicator) <- catlabs
+  }
+
+  ### Confounders Z
+  Z.model.data <- as.matrix(cbind(B, A.indicator))
+
+  ### Exposure variable X
+  X <- rbinom(n,size=1,
+              p=1 / (1 + exp(-(coef.XonZ[1] +
+                                 Z.model.data %*% coef.XonZ[2:length(coef.XonZ)]))))
+
+  return(list(X=X, B=B, A.indicator=A.indicator))
+}
+
+
 .gencov <- function(n, P, Common.P, coef.AonB, coef.XonZ){
   B <- bindata::rmvbin(n, margprob=P, commonprob=Common.P)
 
@@ -459,45 +501,6 @@ get.summstat.binary <- function(Y,X,B,A){
   return(list(X=X, B=B, A.indicator=A.indicator))
 }
 
-.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){
-
-  Z <- .ordgendata(n, sigma=Corr.norm, quants.norm=Quant.norm)
-  n.B <- length(which(unlist(lapply(P.ord,FUN=function(x){length(x)})==2)))
-  n.A <- ncol(Z) - n.B
-
-  if (n.B > 0 ) {
-    B <- Z[, 1:n.B, drop=FALSE]
-    colnames(B) <- paste0('bin', 1:n.B)
-  }
-
-  if(n.A>0)
-  {
-    A <- Z[,(n.B+1):ncol(Z)]
-    A.indicator <- NULL
-    catlabs <- NULL
-    for(i in 1:n.A)
-    {
-      dummy <- NULL
-      levels <- sort(unique(A[,i]))
-      for(level in levels[-1]) {
-        catlabs <- c(catlabs, paste0('cat',i,'_','level',level))
-        dummy <- cbind(dummy, A[,i]==level)
-      }
-      A.indicator <- cbind(A.indicator, dummy)
-    }
-    colnames(A.indicator) <- catlabs
-  }
-
-  ### Confounders Z
-  Z.model.data <- as.matrix(cbind(B, A.indicator))
-
-  ### Exposure variable X
-  X <- rbinom(n,size=1,
-              p=1 / (1 + exp(-(coef.XonZ[1] +
-                                 Z.model.data %*% coef.XonZ[2:length(coef.XonZ)]))))
-
-  return(list(X=X, B=B, A.indicator=A.indicator))
-}
 
 .gencov.chain <- function(n, coef.chain, coef.AonB, coef.XonZ,names.cat=NULL){
   n.B = length(coef.chain)
@@ -547,14 +550,15 @@ get.summstat.binary <- function(Y,X,B,A){
   return(list(X=X, B=B, A.indicator=A.indicator))
 }
 
+
 .gendata.survival <- function(logHR.X.site=NULL, n, P, Common.P, coef.AonB=NULL, coef.XonZ,
-                           coef.cens, scale.cens,
-                           coef.event, scale.event,
-                           censtype="simple", trunc=366,
-                           P.presc.topK=NULL, prescription.mode.topK=NULL,
-                           method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
-                           coef.chain=NULL, user.data=NULL,noX=FALSE,
-                           strat.var.cens=NULL,strat.var.event=NULL)
+                              coef.cens, scale.cens,
+                              coef.event, scale.event,
+                              censtype="simple", trunc=366,
+                              P.presc.topK=NULL, prescription.mode.topK=NULL,
+                              method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
+                              coef.chain=NULL, user.data=NULL,noX=FALSE,
+                              strat.var.cens=NULL,strat.var.event=NULL)
 {
   if (is.null(coef.cens) || is.null(scale.cens) || is.null(coef.event) || is.null(scale.event)){
     stop("For survival outcome, coef.cens, scale.cens, coef.event, and scale.event must be specified")
@@ -694,10 +698,11 @@ get.summstat.binary <- function(Y,X,B,A){
 
 }
 
+
 .gendata.binary <- function(n, P, Common.P, coef.AonB=NULL, coef.XonZ,
-                                method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
-                                coef.chain=NULL, user.data=NULL,noX=FALSE,
-                                coef.Yon1, coef.YonX, coef.YonZ)
+                            method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
+                            coef.chain=NULL, user.data=NULL,noX=FALSE,
+                            coef.Yon1, coef.YonX, coef.YonZ, set.coef.YonX=NULL)
 {
   # test 10.8
   # n=SS$n
@@ -719,6 +724,11 @@ get.summstat.binary <- function(Y,X,B,A){
     stop("For binary outcome, coef.Yon1, coef.YonX, and coef.YonZ must be specified")
   }
   if (method == 4 && is.null(user.data)) stop("User data must be provided for method 4")
+
+  ### Set custom coef.YonX if provided
+  if (!is.null(set.coef.YonX)) {
+    coef.YonX <- set.coef.YonX
+  }
 
   ### Generate covariates via specified method
 
@@ -761,7 +771,7 @@ get.summstat.binary <- function(Y,X,B,A){
 
 
 # Functions for generating data ----
-generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1){
+generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -777,7 +787,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
     ## read in summary statistics SS
     SS <- Summ.Stat[[i]]
     ## get common parameters
-    logHR.X.site <- SS$logHR.X
+    if(is.null(set.logHR.X)) {logHR.X.site <- SS$logHR.X} else {logHR.X.site <- set.logHR.X}
     n <- SS$n
     P <- SS$P
     Common.P <- SS$Common.P
@@ -841,7 +851,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 }
 
 
-generate.data.binary <- function(Summ.Stat,method=1){
+generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -863,7 +873,8 @@ generate.data.binary <- function(Summ.Stat,method=1){
     DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
                          coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
                          method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
-                         coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ) # Matthew added
+                         coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
+                         set.coef.YonX=set.coef.YonX)
 
     ## save site specific data
     if (n.sites > 1) {
@@ -883,5 +894,5 @@ generate.data.binary <- function(Summ.Stat,method=1){
 # TODO: (1) debug, make these functions able to replicate previous plot (survival+binary): done
 # (2) check all the 4 methods in the survival functions can work: done, except for method 4 which require user data
 # (3) Fixed the issue that categorical variables did not regress on previous categorical variables: done
-# (4) think about how to edit the Hazard ratio, probably in the .gendata.survival function.
+# (4) think about how to edit the Hazard ratio, probably in the .gendata.survival function: done
 # (5) add notations critical for the package
