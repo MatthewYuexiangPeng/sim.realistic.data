@@ -260,6 +260,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   ))
 }
 
+
 get.summstat.binary <- function(Y,X,B,A){
   glm.ctrl <- glm.control(epsilon = 1e-8, maxit = 25, trace = FALSE)
 
@@ -419,7 +420,7 @@ get.summstat.binary <- function(Y,X,B,A){
 }
 
 
-.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){
+.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){ # TODO: Corr.norm?
 
   Z <- .ordgendata(n, sigma=Corr.norm, quants.norm=Quant.norm)
   n.B <- length(which(unlist(lapply(P.ord,FUN=function(x){length(x)})==2)))
@@ -461,7 +462,7 @@ get.summstat.binary <- function(Y,X,B,A){
 
 
 .gencov <- function(n, P, Common.P, coef.AonB, coef.XonZ){
-  B <- bindata::rmvbin(n, margprob=P, commonprob=Common.P)
+  B <- bindata::rmvbin(n, margprob=P, commonprob=Common.P) # TODO: may need replaced, not updated
 
   ### Categorical variables A
   ## Obtain correct predicted probabilities from multinomial coefficients by person
@@ -851,6 +852,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 }
 
 
+# TODO: rename logOR
 generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
   n.sites<-length(Summ.Stat)
 
@@ -896,3 +898,6 @@ generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
 # (3) Fixed the issue that categorical variables did not regress on previous categorical variables: done
 # (4) think about how to edit the Hazard ratio, probably in the .gendata.survival function: done
 # (5) add notations critical for the package
+# delete dat.boot
+# only need some of the summary statiics for specific method (simplier output for summ func)
+# try method 4 with our data. separate into a function
