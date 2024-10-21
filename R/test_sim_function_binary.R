@@ -98,7 +98,7 @@ system.time(
 
     SS.list <- append(SS.list, site, after=0)
 
-    norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord) # Q: didn't use this generated variable
+    # norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord) # Q: didn't use this generated variable
 
 
     append(SS.list,
@@ -114,8 +114,8 @@ system.time(
 )
 stopCluster(cl)
 proc.time() - begin
-# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241020.rds")) ## Matthew
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241020.rds"))
+# saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241020_2.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241020_2.rds"))
 
 
 
@@ -123,7 +123,7 @@ saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241020.rds"))
 ## This will be the basis for boostrap sampling.
 
 # Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241005.rds"))
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_241020.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_241020_2.rds"))
 
 names(Summ.Stat) <- sites
 dat.all <- do.call(rbind, lapply(1:5, function(XX) cbind(Summ.Stat[[XX]]$dat.boot,site=XX))) # Matthew: still need numeric
@@ -480,7 +480,7 @@ end <- proc.time()[3]
 end - start
 #####
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_binary_241020.rds"))
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_binary_241020_2.rds"))
 # saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525.rds")) #check1
 
 # res <- readRDS(paste0(resdir,"angio_datasim_simple_2016_0525.rds")) # Matthew: where does this data come from? what is the difference between this and the previous data?
@@ -515,7 +515,7 @@ interleave <- function(m1,m2){
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_binary_241020.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_binary_241020_2.rds"))
 
 
 carr.norm <- array(NA,dim=c(11,11,sim_num))
@@ -692,7 +692,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity_package_version_binary_1020.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_binary_1020_2.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -719,7 +719,7 @@ test <- comb.coef(margin=1,o1,o2,o3)
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
 
-tiff(paste0(resdir,"Cox_coeff_package_version_binary_1020.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"Cox_coeff_package_version_binary_1020_2.tif"),width=10,height=7,units='in',res=300)
 # tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)

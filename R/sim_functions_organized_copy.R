@@ -51,7 +51,7 @@
 
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
-                         my.presc.K=1,tie.method="efron",interact=FALSE,method="all"){
+                         my.presc.K=1,tie.method="efron",interact=FALSE){
   if (is.null(E)){
     stop("E is required for survival data")
   }
@@ -278,42 +278,44 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   # class(cox.adjusted.cens) <- "coxph"
 
   #### Additional information
-  # control.rate <- sum(Y[X==0])/sum(E[X==0])
-  # compare.rate <- sum(Y[X==1])/sum(E[X==1])
-  # control.events <- sum(Y[X==0])
-  # compare.events <- sum(Y[X==1])
-  # N.X <- table(X)
-  # P.time <- c(sum(E[X==0]), sum(E[X==1]))/table(X)
+  control.rate <- sum(Y[X==0])/sum(E[X==0])
+  compare.rate <- sum(Y[X==1])/sum(E[X==1])
+  control.events <- sum(Y[X==0])
+  compare.events <- sum(Y[X==1])
+  N.X <- table(X)
+  P.time <- c(sum(E[X==0]), sum(E[X==1]))/table(X)
 
   # summary statistics for the ord method
   norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
 
   # return survival outcome version
-  if (method=="all"){
-    return(list(n=length(Y),P=P,Common.P=Common.P,P.ord=P.ord,
-                coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
-                P.presc.topK=P.presc.topK,
-                prescription.mode.topK=prescription.mode.topK,
-                simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-                simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-                cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-                covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens, # censtype == "covbump"
-                adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-                Corr.norm = norm.spec$corr.norm,
-                Quants.norm = norm.spec$quants.norm,
-                logHR.X=cox.coef.adjusted[[1]]
-                # N.X=N.X, P.time=P.time, # used in testing
-                # control.events=control.events,compare.events=compare.events, # used in testing
-                # control.rate=control.rate,compare.rate=compare.rate, # used in testing
-                # adj.vcov.event=adj.vcov.event, # used in testing
-                # cox.coef.adjusted=cox.coef.adjusted, # used in testing
-                # cox.vcov=cox.vcov, # used in testing
-                # cox.fit.event=cox.adjusted, # used in testing
-                # cox.fit.cens=cox.adjusted.cens,
-                # Corr.ord=Corr.ord,propensity=ps.by.x, propensity.vcov=ps.vcov, P.presc=P.presc, cStat=ps.c, prescription.mode=prescription.mode,
-                # simple.vcov.cens=simple.vcov.cens, simplebump.vcov.cens=simplebump.vcov.cens, cov.vcov.cens=cov.vcov.cens, covbump.vcov.cens=covbump.vcov.cens,
-                ))
-  }
+  return(list(n=length(Y),N.X=N.X, P.time=P.time,
+              control.events=control.events,compare.events=compare.events,
+              control.rate=control.rate,compare.rate=compare.rate,
+              P=P,Common.P=Common.P,P.ord=P.ord,
+              Corr.ord=Corr.ord,coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
+              propensity=ps.by.x,
+              propensity.vcov=ps.vcov,P.presc=P.presc, cStat=ps.c,
+              prescription.mode=prescription.mode,P.presc.topK=P.presc.topK,
+              prescription.mode.topK=prescription.mode.topK,
+              simple.coef.cens=simple.coef.cens,
+              simple.scale.cens=simple.scale.cens, simple.vcov.cens=simple.vcov.cens,
+              simplebump.coef.cens=simplebump.coef.cens,
+              simplebump.scale.cens=simplebump.scale.cens,
+              simplebump.vcov.cens=simplebump.vcov.cens,
+              cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens,
+              cov.vcov.cens=cov.vcov.cens,
+              covbump.coef.cens=covbump.coef.cens,
+              covbump.scale.cens=covbump.scale.cens,
+              covbump.vcov.cens=covbump.vcov.cens,
+              adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+              adj.vcov.event=adj.vcov.event,cox.coef.adjusted=cox.coef.adjusted,cox.vcov=cox.vcov,
+              cox.fit.event=cox.adjusted,cox.fit.cens=cox.adjusted.cens, # Matthew: move the following code from test R file to here.
+              Corr.norm = norm.spec$corr.norm,
+              Quants.norm = norm.spec$quants.norm,
+              logHR.X=cox.coef.adjusted[[1]],
+              intercept=adj.coef.event[[1]]
+  ))
 }
 
 
@@ -456,14 +458,15 @@ get.summstat.binary <- function(Y,X,B,A){
 
   # return binary outcome version
 
-  return(list(n=length(Y),
+  return(list(n=length(Y),N.X=N.X,
+              control.events=control.events,compare.events=compare.events,
               P=P,Common.P=Common.P,P.ord=P.ord,
-              coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
+              Corr.ord=Corr.ord,coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
+              propensity=ps.by.x,
+              propensity.vcov=ps.vcov,cStat=ps.c,
               coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
               Corr.norm = norm.spec$corr.norm,
               Quants.norm = norm.spec$quants.norm
-              # N.X=N.X,control.events=control.events,compare.events=compare.events,
-              # Corr.ord=Corr.ord,propensity=ps.by.x,propensity.vcov=ps.vcov,cStat=ps.c,
   ))
 }
 #####
@@ -643,27 +646,15 @@ get.summstat.binary <- function(Y,X,B,A){
 }
 
 
-# .gendata.survival <- function(logHR.X.site=NULL, n, P, Common.P, coef.AonB=NULL, coef.XonZ,
-#                               coef.cens, scale.cens,
-#                               coef.event, scale.event,
-#                               censtype="simple", trunc=366,
-#                               P.presc.topK=NULL, prescription.mode.topK=NULL,
-#                               method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
-#                               coef.chain=NULL, user.data=NULL,noX=FALSE,
-#                               strat.var.cens=NULL,strat.var.event=NULL)
-.gendata.survival <- function(logHR.X.site=NULL, # optional
-                              P.ord=NULL, Quant.norm=NULL, Corr.norm=NULL, # method 1 .gencov.ord
-                              P, Common.P, # method 2 .gencov
-                              coef.chain=NULL, # method 3 .gencov.chain
-                              user.data=NULL,noX=FALSE, # method 4 user data
-                              n, coef.XonZ, coef.AonB=NULL, # required
-                              coef.event, scale.event, coef.cens, scale.cens,
+.gendata.survival <- function(logHR.X.site=NULL, n, P, Common.P, coef.AonB=NULL, coef.XonZ,
+                              coef.cens, scale.cens,
+                              coef.event, scale.event,
                               censtype="simple", trunc=366,
-                              method=1,
-                              strat.var.cens=NULL,strat.var.event=NULL,
-                              P.presc.topK=NULL, prescription.mode.topK=NULL # censtype%in%c("simplebump","covbump")
-                              )
-  {
+                              P.presc.topK=NULL, prescription.mode.topK=NULL,
+                              method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
+                              coef.chain=NULL, user.data=NULL,noX=FALSE,
+                              strat.var.cens=NULL,strat.var.event=NULL)
+{
   # test 10.20
   # noX=FALSE
 
@@ -1010,3 +1001,4 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
 # try method 4 with our data. separate into a function
 # delete dat.boot (add in the test file, doesn't matter)
 # add notations critical for the package
+
