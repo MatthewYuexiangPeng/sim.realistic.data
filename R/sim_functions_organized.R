@@ -1,3 +1,54 @@
+# Hidden functions to get summary statistics ----
+.ordtonorm <- function (probs, Cor) {
+  q = length(probs)
+  categ_probs = 0
+  cumul_probs = list(0)
+  quant_probs = list(0)
+  means = 0
+  vars = 0
+  var.wt = function(x, w) {
+    m = weighted.mean(x = x, w = w)
+    sum((x[1:length(x)] - m)^2 * w[1:length(x)])
+  }
+  for (i in 1:q) {
+    categ_probs[i] = length(probs[[i]])
+    cumul_probs[[i]] = cumsum(1:categ_probs[i]/10^12 + probs[[i]])
+    cumul_probs[[i]][categ_probs[i]] = 1
+    quant_probs[[i]] = qnorm(p = cumul_probs[[i]], mean = 0,
+                             sd = 1)
+    means[i] = weighted.mean(x = 1:categ_probs[i], w = probs[[i]])
+    vars[i] = var.wt(x = 1:categ_probs[i], w = probs[[i]])
+  }
+  Cor_norm = Cor
+  for (i in 1:(q - 1)) {
+    for (j in (i + 1):q) {
+      gridd = rep(0, times = 201)
+      for (ci in 1:(categ_probs[i] - 1)) {
+        for (cj in 1:(categ_probs[j] - 1)) {
+          for (steps in -100:100) {
+            gridd[101 + steps] = gridd[101 + steps] +
+              mvtnorm::pmvnorm(upper = c(quant_probs[[i]][ci],
+                                         quant_probs[[j]][cj]), corr = matrix(2,
+                                                                              2, data = c(1, steps/100, steps/100,
+                                                                                          1)))[1]
+          }
+        }
+      }
+      f = suppressWarnings(approxfun(y = -100:100/100,
+                                     x = gridd))
+      Cor_norm[i, j] = Cor_norm[j, i] = f(Cor[i, j] * sqrt(vars[i] *
+                                                             vars[j]) + means[i] * means[j] - categ_probs[i] *
+                                            categ_probs[j] + categ_probs[j] * sum(cumul_probs[[i]][1:(categ_probs[i] -
+                                                                                                        1)]) + categ_probs[i] * sum(cumul_probs[[j]][1:(categ_probs[j] -
+                                                                                                                                                          1)]))
+    }
+  }
+  return(list('corr.norm'=Cor_norm,'quants.norm'=quant_probs))
+
+}
+#####
+
+
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
                          my.presc.K=1,tie.method="efron",interact=FALSE){
@@ -234,6 +285,9 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   N.X <- table(X)
   P.time <- c(sum(E[X==0]), sum(E[X==1]))/table(X)
 
+  # summary statistics for the ord method
+  norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
+
   # return survival outcome version
   return(list(n=length(Y),N.X=N.X, P.time=P.time,
               control.events=control.events,compare.events=compare.events,
@@ -256,7 +310,11 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
               covbump.vcov.cens=covbump.vcov.cens,
               adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
               adj.vcov.event=adj.vcov.event,cox.coef.adjusted=cox.coef.adjusted,cox.vcov=cox.vcov,
-              cox.fit.event=cox.adjusted,cox.fit.cens=cox.adjusted.cens
+              cox.fit.event=cox.adjusted,cox.fit.cens=cox.adjusted.cens, # Matthew: move the following code from test R file to here.
+              Corr.norm = norm.spec$corr.norm,
+              Quants.norm = norm.spec$quants.norm,
+              logHR.X=cox.coef.adjusted[[1]],
+              intercept=adj.coef.event[[1]]
   ))
 }
 
@@ -395,6 +453,9 @@ get.summstat.binary <- function(Y,X,B,A){
   compare.events <- sum(Y[X==1])
   N.X <- table(X)
 
+  # summary statistics for the ord method
+  norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
+
   # return binary outcome version
 
   return(list(n=length(Y),N.X=N.X,
@@ -403,13 +464,46 @@ get.summstat.binary <- function(Y,X,B,A){
               Corr.ord=Corr.ord,coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
               propensity=ps.by.x,
               propensity.vcov=ps.vcov,cStat=ps.c,
-              coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ  ## Matthew added
+              coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
+              Corr.norm = norm.spec$corr.norm,
+              Quants.norm = norm.spec$quants.norm
   ))
 }
 #####
 
 
 # Hidden functions used to generate data ----
+.rmvbin <- function (n, margprob,
+                    commonprob=diag(margprob),
+                    bincorr=diag(length(margprob)),
+                    sigma=diag(length(margprob)),
+                    colnames=NULL, simulvals=NULL) {
+
+  if(missing(sigma))
+  {
+    if(!missing(commonprob))
+    {
+      if (missing(margprob))
+        margprob <- diag(commonprob)
+      sigma <- commonprob2sigma(commonprob, simulvals)
+    }
+    else if(!missing(bincorr))
+    {
+      commonprob <- bincorr2commonprob(margprob, bincorr)
+      sigma <- commonprob2sigma(commonprob, simulvals)
+    }
+  }
+  else if (any(eigen(sigma)$values<0))
+    stop ("Sigma is not positive definite.")
+
+  retval <- rmvnorm(n, qnorm(margprob, sd = sqrt(diag(sigma))), as.matrix(sigma))
+  retval <- ra2ba(retval)
+  dimnames(retval) <- list(NULL, colnames)
+  retval
+}
+# reference: https://github.com/millerjoey/bindata_rmvbin/blob/master/rmvbin_source.R
+
+
 .ordgendata <- function(n, sigma, quants.norm){
   retval = mvtnorm::rmvnorm(n = n, sigma = sigma)
   for (i in 1:ncol(sigma)) {
@@ -420,7 +514,7 @@ get.summstat.binary <- function(Y,X,B,A){
 }
 
 
-.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){ # TODO: Corr.norm?
+.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){ # TODO: Corr.norm?Quant.norm?
 
   Z <- .ordgendata(n, sigma=Corr.norm, quants.norm=Quant.norm)
   n.B <- length(which(unlist(lapply(P.ord,FUN=function(x){length(x)})==2)))
@@ -462,7 +556,7 @@ get.summstat.binary <- function(Y,X,B,A){
 
 
 .gencov <- function(n, P, Common.P, coef.AonB, coef.XonZ){
-  B <- bindata::rmvbin(n, margprob=P, commonprob=Common.P) # TODO: may need replaced, not updated
+  B <- .rmvbin(n, margprob=P, commonprob=Common.P)
 
   ### Categorical variables A
   ## Obtain correct predicted probabilities from multinomial coefficients by person
@@ -561,6 +655,10 @@ get.summstat.binary <- function(Y,X,B,A){
                               coef.chain=NULL, user.data=NULL,noX=FALSE,
                               strat.var.cens=NULL,strat.var.event=NULL)
 {
+  # test 10.20
+  # noX=FALSE
+
+
   if (is.null(coef.cens) || is.null(scale.cens) || is.null(coef.event) || is.null(scale.event)){
     stop("For survival outcome, coef.cens, scale.cens, coef.event, and scale.event must be specified")
   }
@@ -630,7 +728,6 @@ get.summstat.binary <- function(Y,X,B,A){
   ### Event time
   ue <- runif(n)
 
-  # TODO: 9.24 adj.coef.event has a na column, need to find why. KPNC, cat_level2012
   if (length(scale.event)==1) {
     eventT <- ceiling((-log(ue) * exp( cbind(1,X,Z.model.data) %*% coef.event / scale.event )) ^ (scale.event))
     if (!is.null(X)) {
@@ -675,8 +772,7 @@ get.summstat.binary <- function(Y,X,B,A){
     Y.1 <- as.numeric(ifelse(E.1 == eventT.1,1,0))
     Y.0 <- as.numeric(ifelse(E.0 == eventT.0,1,0))
 
-  }
-  else
+  } else
   {
     E <- apply(cbind(eventT,trunc,censorT),1,min,na.rm=T)
     Y <- as.numeric(ifelse(E == eventT,1,0))
@@ -703,7 +799,7 @@ get.summstat.binary <- function(Y,X,B,A){
 .gendata.binary <- function(n, P, Common.P, coef.AonB=NULL, coef.XonZ,
                             method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
                             coef.chain=NULL, user.data=NULL,noX=FALSE,
-                            coef.Yon1, coef.YonX, coef.YonZ, set.coef.YonX=NULL)
+                            coef.Yon1, coef.YonX, coef.YonZ, set.logOR.X=NULL)
 {
   # test 10.8
   # n=SS$n
@@ -727,8 +823,8 @@ get.summstat.binary <- function(Y,X,B,A){
   if (method == 4 && is.null(user.data)) stop("User data must be provided for method 4")
 
   ### Set custom coef.YonX if provided
-  if (!is.null(set.coef.YonX)) {
-    coef.YonX <- set.coef.YonX
+  if (!is.null(set.logOR.X)) {
+    coef.YonX <- set.logOR.X
   }
 
   ### Generate covariates via specified method
@@ -773,6 +869,13 @@ get.summstat.binary <- function(Y,X,B,A){
 
 # Functions for generating data ----
 generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
+  # test 10.20
+  # censtype="simple"
+  # trunc=365
+  # method=1
+  # set.logHR.X=NULL
+  # i=1
+
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -793,7 +896,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
     P <- SS$P
     Common.P <- SS$Common.P
     coef.XonZ <- SS$coef.XonZ
-    coef.event <- c(SS$intercept, SS$adj.coef.event[-1])
+    coef.event <- SS$adj.coef.event
     scale.event <- SS$adj.scale.event
     coef.chain <- SS$Coef.bin
     coef.AonB <- SS$Coef.cat
@@ -853,7 +956,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 
 
 # TODO: rename logOR
-generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
+generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -876,7 +979,7 @@ generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
                          coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
                          method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
                          coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-                         set.coef.YonX=set.coef.YonX)
+                         set.logOR.X=set.logOR.X)
 
     ## save site specific data
     if (n.sites > 1) {
@@ -893,11 +996,8 @@ generate.data.binary <- function(Summ.Stat,method=1, set.coef.YonX=NULL){
 }
 
 
-# TODO: (1) debug, make these functions able to replicate previous plot (survival+binary): done
-# (2) check all the 4 methods in the survival functions can work: done, except for method 4 which require user data
-# (3) Fixed the issue that categorical variables did not regress on previous categorical variables: done
-# (4) think about how to edit the Hazard ratio, probably in the .gendata.survival function: done
-# (5) add notations critical for the package
-# delete dat.boot
+# TODO:
 # only need some of the summary statiics for specific method (simplier output for summ func)
 # try method 4 with our data. separate into a function
+# delete dat.boot (add in the test file, doesn't matter)
+# add notations critical for the package

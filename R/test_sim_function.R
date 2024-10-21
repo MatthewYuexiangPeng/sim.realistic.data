@@ -11,53 +11,6 @@ resdir <- "~/Yuexiang Peng/UW/Research/Jennifer Nelson/Cook/summer project/simu_
 # datdir <- "G:/CTRHS/Sentinel/Y7_Task_Orders_2015/Big sim/Data/datatoGHC/datatoGHC/Angioedema/"
 # resdir <- '//groups/data/CTRHS/Sentinel/Y6_Task_Orders/Methods/Cook-SurvivalII/Programming/Matthew/Data/'
 
-.ordtonorm <- function (probs, Cor) {
-  q = length(probs)
-  categ_probs = 0
-  cumul_probs = list(0)
-  quant_probs = list(0)
-  means = 0
-  vars = 0
-  var.wt = function(x, w) {
-    m = weighted.mean(x = x, w = w)
-    sum((x[1:length(x)] - m)^2 * w[1:length(x)])
-  }
-  for (i in 1:q) {
-    categ_probs[i] = length(probs[[i]])
-    cumul_probs[[i]] = cumsum(1:categ_probs[i]/10^12 + probs[[i]])
-    cumul_probs[[i]][categ_probs[i]] = 1
-    quant_probs[[i]] = qnorm(p = cumul_probs[[i]], mean = 0,
-                             sd = 1)
-    means[i] = weighted.mean(x = 1:categ_probs[i], w = probs[[i]])
-    vars[i] = var.wt(x = 1:categ_probs[i], w = probs[[i]])
-  }
-  Cor_norm = Cor
-  for (i in 1:(q - 1)) {
-    for (j in (i + 1):q) {
-      gridd = rep(0, times = 201)
-      for (ci in 1:(categ_probs[i] - 1)) {
-        for (cj in 1:(categ_probs[j] - 1)) {
-          for (steps in -100:100) {
-            gridd[101 + steps] = gridd[101 + steps] +
-              mvtnorm::pmvnorm(upper = c(quant_probs[[i]][ci],
-                                         quant_probs[[j]][cj]), corr = matrix(2,
-                                                                              2, data = c(1, steps/100, steps/100,
-                                                                                          1)))[1]
-          }
-        }
-      }
-      f = suppressWarnings(approxfun(y = -100:100/100,
-                                     x = gridd))
-      Cor_norm[i, j] = Cor_norm[j, i] = f(Cor[i, j] * sqrt(vars[i] *
-                                                             vars[j]) + means[i] * means[j] - categ_probs[i] *
-                                            categ_probs[j] + categ_probs[j] * sum(cumul_probs[[i]][1:(categ_probs[i] -
-                                                                                                        1)]) + categ_probs[i] * sum(cumul_probs[[j]][1:(categ_probs[j] -
-                                                                                                                                                          1)]))
-    }
-  }
-  return(list('corr.norm'=Cor_norm,'quants.norm'=quant_probs))
-
-}
 
 require(survival)
 glm_control <- glm.control(epsilon = 1e-8, maxit = 25, trace = FALSE)
@@ -148,25 +101,27 @@ system.time(
     norm.spec <- .ordtonorm(probs=SS.list$P.ord, Cor=SS.list$Corr.ord)
 
 
-    append(SS.list,list(Corr.norm=norm.spec$corr.norm,
-                        Quants.norm=norm.spec$quants.norm,
-                        logHR.X=SS.list$cox.coef.adjusted[[1]],
-                        intercept=SS.list$adj.coef.event[[1]],
-                        dat.boot=data.frame(X,Y,E,B,C)))
+    append(SS.list,
+           list(
+             # Corr.norm=norm.spec$corr.norm,
+             # Quants.norm=norm.spec$quants.norm,
+             # logHR.X=SS.list$cox.coef.adjusted[[1]],
+             # intercept=SS.list$adj.coef.event[[1]],
+             dat.boot=data.frame(X,Y,E,B,C))
+           )
 
   }
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241008.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241020.rds")) ## Matthew
 # saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
-
 
 
 ## Sample the same dataset that was used for summary statistics.
 ## This will be the basis for boostrap sampling.
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241008.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241020.rds"))
 # Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 names(Summ.Stat) <- sites
@@ -397,7 +352,8 @@ rownames(ps.boot.site.or) <- prop.labels[1:12]
 
 # no parallel version ----
 samp.size <- dim(dat.boot)[[1]]
-n.sim <- 625
+sim_num = 3
+n.sim <- sim_num
 # seed1<-83745 bump
 # seed1<-379 simple
 seed1 <- 566391
@@ -520,7 +476,7 @@ end <- proc.time()[3]
 end - start
 #####
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_241006.rds"))
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020.rds"))
 # saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525.rds")) #check1
 
 # res <- readRDS(paste0(resdir,"angio_datasim_simple_2016_0525.rds")) # Matthew: where does this data come from? what is the difference between this and the previous data?
@@ -555,18 +511,18 @@ interleave <- function(m1,m2){
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_241006.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020.rds"))
 
 
-carr.norm <- array(NA,dim=c(11,11,625))
-carr.chain <- array(NA,dim=c(11,11,625))
-carr.boot <- array(NA,dim=c(11,11,625))
+carr.norm <- array(NA,dim=c(11,11,sim_num))
+carr.chain <- array(NA,dim=c(11,11,sim_num))
+carr.boot <- array(NA,dim=c(11,11,sim_num))
 
 cprob.norm <- 0
 cprob.chain <- 0
 cprob.boot <- 0
 for (i in 1:16) { # TODO: may change to the core number
-  for (j in 1:625) {
+  for (j in 1:sim_num) {
     carr.norm[,,j] <- res[[i]]$common.prob.norm[[j]]
     carr.chain[,,j] <- res[[i]]$common.prob.chain[[j]]
     carr.boot[,,j] <- res[[i]]$common.prob.boot[[j]]
@@ -732,7 +688,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity_package_version_1006.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_1020.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -759,7 +715,7 @@ test <- comb.coef(margin=1,o1,o2,o3)
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
 
-tiff(paste0(resdir,"Cox_coeff_package_version_1006.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"Cox_coeff_package_version_1020.tif"),width=10,height=7,units='in',res=300)
 # tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
