@@ -91,7 +91,7 @@ system.time(
 
     # test for get.summstat.survival function
     SS.list <- get.summstat.survival(E=E,Y=Y,X=X,B=B,A=C,prescription.mode,
-                            my.presc.K,tie.method)
+                            my.presc.K,tie.method,method=2)
 
     # test for get.summstat.binary function
     # SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C)
@@ -114,14 +114,14 @@ system.time(
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241020_2.rds")) ## Matthew
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_survival_241020_method2.rds")) ## Matthew
 # saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 
 ## Sample the same dataset that was used for summary statistics.
-## This will be the basis for boostrap sampling.
+## This will be the basis for boostrap sampling.-----
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241020_2.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_survival_241020_method2.rds"))
 # Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_240924.rds"))
 
 names(Summ.Stat) <- sites
@@ -188,171 +188,11 @@ rownames(ps.boot.site.or) <- prop.labels[1:12]
 # het <- unlist(foreach(i=Summ.Stat) %do% exp(i$cox.coef.adjusted[[1]]))# Matthew: No cox.coef.adjusted for binary. delete the 2 rows
 # logHR <- list(1.0,1.0,1.5,1.5,2.0,2.0,het,het)
 
-# # parallel computing version ----
-# samp.size <- dim(dat.boot)[[1]]
-# n.sim <- 5
-# #seed1<-83745 bump
-# #seed1<-379 simple
-# seed1 <-566391
-# n_cores <- detectCores()
-# cl<-makeCluster(n_cores) #Don't need to load parallel
-#
-# registerDoParallel(cl, cores = n_cores )
-# clusterSetRNGStream(cl = cl, iseed = seed1) #Multiple streams of seeds
-# res<-NULL
-#
-# start <- proc.time()[3]
-# res <- foreach(c=1:n_cores,
-#                .verbose=TRUE,
-#                .errorhandling=c('pass'),.packages=c("foreach","survival")) %dopar% {
-#                  # # test
-#                  # c=1
-#                  # .verbose=TRUE
-#                  # .errorhandling=c('pass')
-#                  # .packages=c("foreach","survival")
-#                  sim.estimates <- sapply(1:n.sim,function(XX) NULL)
-#                  PS.beta.site.norm <- sapply(1:length(sites),function(XX) NULL)
-#                  PS.beta.site.chain <- sapply(1:length(sites),function(XX) NULL)
-#                  PS.beta.site.boot <- sapply(1:length(sites),function(XX) NULL)
-#                  PS.beta.norm <- NULL
-#                  PS.beta.chain <- NULL
-#                  PS.beta.boot <- NULL
-#                  cox.site.norm  <- sapply(1:length(sites),function(XX) NULL)
-#                  cox.site.chain <- sapply(1:length(sites),function(XX) NULL)
-#                  cox.site.boot  <- sapply(1:length(sites),function(XX) NULL)
-#
-#                  cox.pooled.norm  <- NULL
-#                  cox.pooled.chain <- NULL
-#                  cox.pooled.boot  <- NULL
-#                  common.prob.norm <- sapply(1:n.sim,function(XX) NULL)
-#                  common.prob.chain <- sapply(1:n.sim,function(XX) NULL)
-#                  common.prob.boot <- sapply(1:n.sim,function(XX) NULL)
-#
-#                  for (sim in 1:n.sim) {
-#                    sim.dat.norm <- NULL
-#                    sim.dat.chain <- NULL
-#                    sim.dat.boot <- NULL
-#                    PS.list.norm <- NULL
-#                    PS.list.chain <- NULL
-#                    PS.list.boot <- NULL
-#                    cox.norm <- NULL
-#                    cox.chain <- NULL
-#                    cox.boot <- NULL
-#
-#                    # test survival
-#                    ## simulate data using multivariate normal
-#                    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype=censtype, trunc=366)$Data.Simulated # Matthew:
-#                    ## simulate data using covariate chain
-#                    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype=censtype, trunc=366,method=3)$Data.Simulated
-#
-#                    # # test binary
-#                    # ## simulate data using multivariate normal
-#                    # sim.dat.norm <- generate.data.binary(Summ.Stat, censtype=censtype)$Data.Simulated # Matthew:
-#                    # ## simulate data using covariate chain
-#                    # sim.dat.chain <- generate.data.binary(Summ.Stat, censtype=censtype,method=3)$Data.Simulated
-#
-#
-#                    sim.dat.boot <- NULL
-#                    sim.dat.boot0 <- NULL
-#                    for (site in 1:length(sites)) {
-#                      site.indx <- dat.boot[,"site"]==site
-#                      sim.dat.boot0 <- as.data.frame(dat.boot[site.indx,][sample(1:sum(site.indx),replace=TRUE),])
-#                      covs <- sim.dat.boot0[,c(1:11)]
-#                      x <- sim.dat.boot0[,c(12)]
-#                      y <- sim.dat.boot0[,c(13)]
-#                      e <- sim.dat.boot0[,c(14)]
-#                      s <- sim.dat.boot0[,c(15)]
-#                      names(covs) <- colnames(Summ.Stat[[site]]$cox.fit.event$x)[-1]
-#                      sim.dat.boot <- rbind(sim.dat.boot,cbind(covs,X=x,Y=y,E=e,site=s))
-#
-#                      site.indx <- NULL
-#                      sim.dat.boot0 <- NULL
-#                    }
-#
-#                    cov.cols <- 1:11
-#
-#                    common.prob.norm[[sim]] <- (t(as.matrix(sim.dat.norm[,cov.cols]))%*%as.matrix(sim.dat.norm[,cov.cols]))/samp.size
-#                    common.prob.chain[[sim]] <- (t(as.matrix(sim.dat.chain[,cov.cols]))%*%as.matrix(sim.dat.chain[,cov.cols]))/samp.size
-#                    common.prob.boot[[sim]] <- (t(as.matrix(sim.dat.boot[,cov.cols]))%*%as.matrix(sim.dat.boot[,cov.cols]))/samp.size
-#
-#
-#                    PS.list.norm <- comp.pscore(X=sim.dat.norm$X,Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
-#                    PS.list.chain <- comp.pscore(X=sim.dat.chain$X,Z=sim.dat.chain[,cov.cols],S=sim.dat.chain$site)
-#                    PS.list.boot <- comp.pscore(X=sim.dat.boot[,'X'],Z=sim.dat.boot[,cov.cols],S=sim.dat.boot[,'site'])
-#
-#                    PS.beta.site.norm <- foreach(i=PS.beta.site.norm,j=PS.list.norm[[4]]) %do% cbind(i,j)
-#                    PS.beta.site.chain <- foreach(i=PS.beta.site.chain,j=PS.list.chain[[4]]) %do% cbind(i,j)
-#                    PS.beta.site.boot <- foreach(i=PS.beta.site.boot,j=PS.list.boot[[4]]) %do% cbind(i,j)
-#                    PS.beta.norm <- cbind(PS.beta.norm,PS.list.norm[[2]])
-#                    PS.beta.chain <- cbind(PS.beta.chain,PS.list.chain[[2]])
-#                    PS.beta.boot <- cbind(PS.beta.boot,PS.list.boot[[2]])
-#
-#                    # Matthew: need a binary outcome version. still name as cox for now, change it later
-#                    # test survival version
-#
-#                    # # test why Y has na
-#                    # any(is.na(sim.dat.norm$Y))
-#                    # sum(is.na(sim.dat.norm$Y))/length(sim.dat.norm$Y)
-#
-#                    # TODO: Warning message: Ran out of iterations and did not converge
-#                    cox.norm <- cox.est(X=sim.dat.norm$X,Y=sim.dat.norm$Y,E=sim.dat.norm$E,
-#                                        Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
-#                    cox.chain <- cox.est(X=sim.dat.chain$X,Y=sim.dat.chain$Y,E=sim.dat.chain$E,
-#                                         Z=sim.dat.chain[,cov.cols],S=sim.dat.chain$site)
-#                    cox.boot <- cox.est(X=sim.dat.boot[,'X'],Y=sim.dat.boot[,'Y'],E=sim.dat.boot[,'E'],
-#                                        Z=sim.dat.boot[,cov.cols],S=sim.dat.boot[,'site'])
-#
-#                    # # test binary version
-#                    # cox.norm <- logistic.est(X=sim.dat.norm$X,Y=sim.dat.norm$Y,
-#                    #                          Z=sim.dat.norm[,cov.cols],S=sim.dat.norm$site)
-#                    # cox.chain <- logistic.est(X=sim.dat.chain$X,Y=sim.dat.chain$Y,
-#                    #                           Z=sim.dat.chain[,cov.cols],S=sim.dat.chain$site)
-#                    # cox.boot <- logistic.est(X=sim.dat.boot[,'X'],Y=sim.dat.boot[,'Y'],
-#                    #                          Z=sim.dat.boot[,cov.cols],S=sim.dat.boot[,'site'])
-#
-#                    for (k in 1:5) {
-#                      if (!is.null(cox.norm$Site.Specific[[k]])) {
-#                        cox.site.norm[[k]]  <-  cbind(cox.site.norm[[k]], cox.norm$Site.Specific[[k]])
-#                      } else {
-#                        cox.site.norm[[k]]  <-  cbind(cox.site.norm[[k]], rep(NA,times=length(cov.cols)+1))
-#                      }
-#                      if (!is.null(cox.chain$Site.Specific[[k]])) {
-#                        cox.site.chain[[k]]  <-  cbind(cox.site.chain[[k]], cox.chain$Site.Specific[[k]])
-#                      } else {
-#                        cox.site.chain[[k]]  <-  cbind(cox.site.chain[[k]], rep(NA,times=length(cov.cols)+1))
-#                      }
-#                      if (!is.null(cox.boot$Site.Specific[[k]])) {
-#                        cox.site.boot[[k]]  <-  cbind(cox.site.boot[[k]], cox.boot$Site.Specific[[k]])
-#                      } else {
-#                        cox.site.boot[[k]]  <-  cbind(cox.site.boot[[k]], rep(NA,times=length(cov.cols)+1))
-#                      }
-#                    }
-#
-#
-#                    cox.pooled.norm  <- cbind(cox.pooled.norm,cox.norm$Pooled)
-#                    cox.pooled.chain <- cbind(cox.pooled.chain,cox.chain$Pooled)
-#                    cox.pooled.boot  <- cbind(cox.pooled.boot,cox.boot$Pooled)
-#
-#                  }
-#                  list(PS.beta.site.norm=PS.beta.site.norm,
-#                       PS.beta.site.chain=PS.beta.site.chain,
-#                       PS.beta.site.boot=PS.beta.site.boot,
-#                       cox.site.norm=cox.site.norm,cox.site.chain=cox.site.chain,
-#                       cox.site.boot=cox.site.boot, PS.beta.norm=PS.beta.norm,
-#                       PS.beta.chain=PS.beta.chain,PS.beta.boot=PS.beta.boot,
-#                       cox.pooled.norm=cox.pooled.norm,cox.pooled.chain=cox.pooled.chain,
-#                       cox.pooled.boot=cox.pooled.boot,common.prob.norm=common.prob.norm,
-#                       common.prob.chain=common.prob.chain,common.prob.boot=common.prob.boot)
-#                }
-#
-# stopCluster(cl)
-# end <- proc.time()[3]
-# end-start
 # #####
 
 # no parallel version ----
 samp.size <- dim(dat.boot)[[1]]
-sim_num = 3
+sim_num = 2
 n.sim <- sim_num
 # seed1<-83745 bump
 # seed1<-379 simple
@@ -386,8 +226,8 @@ for (c in 1:n_cores) {
   common.prob.boot <- sapply(1:n.sim, function(XX) NULL)
 
   for (sim in 1:n.sim) {
-    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366)$Data.Simulated
-    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 3)$Data.Simulated # 3
+    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2)$Data.Simulated # 1
+    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2)$Data.Simulated # 3
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL
@@ -476,16 +316,11 @@ end <- proc.time()[3]
 end - start
 #####
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020_2.rds"))
-# saveRDS(res,paste0(resdir,"angio_datasim_cov_2016_0525.rds")) #check1
-
-# res <- readRDS(paste0(resdir,"angio_datasim_simple_2016_0525.rds")) # Matthew: where does this data come from? what is the difference between this and the previous data?
-#
-# res <- readRDS(paste0(resdir,"angio_datasim_simplebump_2016_0525.rds")) # Matthew: use the simple one first
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020_method2.rds"))
 
 
 # Plots -----
-# Matthew: run below functions first -----
+# Matthew: run below functions first
 comb.coef <- function(margin=1, m1,m2,m3) {
   if (margin==1) {
     dim.curr <- dim(m1)[[1]]
@@ -511,7 +346,7 @@ interleave <- function(m1,m2){
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020_2.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_survival_241020_method2.rds"))
 
 
 carr.norm <- array(NA,dim=c(11,11,sim_num))
@@ -572,19 +407,19 @@ rownames(Out.coef.summ) <- c("Intercept","X", "1+ IP Visits","1+ ED Visits", # M
 #
 # Table.descr_new <- as.data.frame(lapply(Table.descr, as.character),
 #                                  stringsAsFactors = FALSE)
-
-Cat.dist <-  lapply(Summ.Stat, function(XX) {
-  temp<- as.matrix(unlist(XX$P.ord))
-  colnames(temp) <- toupper(XX[[1]])
-  temp.frame <- data.frame('id'=trimws(as.character(rownames(temp))),
-                           round(temp,2)*100)
-  temp.frame[order(trimws(temp.frame$id)),]
-})
-
-
-merged.data.frame <- Reduce(function(...) merge(..., by='id', all=TRUE), Cat.dist)
-table.proportions <- merged.data.frame[order(trimws(merged.data.frame$id)),]
-
+#
+# Cat.dist <-  lapply(Summ.Stat, function(XX) {
+#   temp<- as.matrix(unlist(XX$P.ord))
+#   colnames(temp) <- toupper(XX[[1]])
+#   temp.frame <- data.frame('id'=trimws(as.character(rownames(temp))),
+#                            round(temp,2)*100)
+#   temp.frame[order(trimws(temp.frame$id)),]
+# })
+#
+#
+# merged.data.frame <- Reduce(function(...) merge(..., by='id', all=TRUE), Cat.dist)
+# table.proportions <- merged.data.frame[order(trimws(merged.data.frame$id)),]
+#
 # Converted.weib <- lapply(Summ.Stat, function(XX) {  # Matthew: TODO
 #   if ("Log(scale)"%in%rownames(XX$adj.vcov.event)) {
 #     temp.grad <- c(-1/(XX$adj.scale.event), XX$adj.coef.event[["X"]]/XX$adj.scale.event)
@@ -612,41 +447,41 @@ table.proportions <- merged.data.frame[order(trimws(merged.data.frame$id)),]
 # })
 # merged.cox.coefs <- do.call(rbind, Cox.estimates)
 
-interleave <- function(m1,m2)
-{
-  ord1 <- 2*(1:dim(m1)[[1]])-1
-  ord2 <- 2*(1:dim(m2)[[1]])
-  rbind(m1,m2)[order(c(ord1,ord2)),]
-}
-main.effect <- interleave(Converted.weib,merged.cox.coefs)
+# interleave <- function(m1,m2)
+# {
+#   ord1 <- 2*(1:dim(m1)[[1]])-1
+#   ord2 <- 2*(1:dim(m2)[[1]])
+#   rbind(m1,m2)[order(c(ord1,ord2)),]
+# }
+# main.effect <- interleave(Converted.weib,merged.cox.coefs)
+#
+# main.effect <- main.effect[-c(10:9),]
 
-main.effect <- main.effect[-c(10:9),]
-
-site_mask <- sites
-op <- par(mar=c(5.1,6.1,4.1,1.1),adj=.5)
-y.lab.points <- seq(7,1,by=-2) + 0.5
-lab.points <- c(7.75,
-                7.25,5.75,5.25,3.75,3.25,1.75,1.25)
-plot(main.effect[,1],lab.points, axes=FALSE, pch=15,
-     col=c("tomato","steelblue"), ylab='',
-     xlab = "Estimated HR and 95% CI",
-     xlim=c(min(main.effect[,2],na.rm=TRUE)-0.5,
-            max(main.effect[,3],na.rm=TRUE)+.5), ylim = c(0,9.5))
-axis(side=2, lwd=0,at=y.lab.points, labels=trimws(toupper(site_mask[-5])), las=1,
-     cex.axis=0.80, hadj=0.5)
-axis(side=1,cex.axis=0.85,at=c(1:12))
-cols <- rep(c("tomato","steelblue"),times=9)
-abline(v=1,lty=2)
-for (i in 8:1) {
-  lines(c(main.effect[9-i,2],main.effect[9-i,3]),
-        c(lab.points[[9-i]],lab.points[[9-i]]),
-        col= cols[[9-i]], lwd=2)
-}
-points(8.5,7,pch=15,col="tomato")
-points(8.5,6.5,pch=15,col="steelblue")
-text(8.6,7,"Weibull",pos=4,cex=0.9)
-text(8.6,6.5,"Cox",pos=4,cex=0.9)
-par(op)
+# site_mask <- sites
+# op <- par(mar=c(5.1,6.1,4.1,1.1),adj=.5)
+# y.lab.points <- seq(7,1,by=-2) + 0.5
+# lab.points <- c(7.75,
+#                 7.25,5.75,5.25,3.75,3.25,1.75,1.25)
+# plot(main.effect[,1],lab.points, axes=FALSE, pch=15,
+#      col=c("tomato","steelblue"), ylab='',
+#      xlab = "Estimated HR and 95% CI",
+#      xlim=c(min(main.effect[,2],na.rm=TRUE)-0.5,
+#             max(main.effect[,3],na.rm=TRUE)+.5), ylim = c(0,9.5))
+# axis(side=2, lwd=0,at=y.lab.points, labels=trimws(toupper(site_mask[-5])), las=1,
+#      cex.axis=0.80, hadj=0.5)
+# axis(side=1,cex.axis=0.85,at=c(1:12))
+# cols <- rep(c("tomato","steelblue"),times=9)
+# abline(v=1,lty=2)
+# for (i in 8:1) {
+#   lines(c(main.effect[9-i,2],main.effect[9-i,3]),
+#         c(lab.points[[9-i]],lab.points[[9-i]]),
+#         col= cols[[9-i]], lwd=2)
+# }
+# points(8.5,7,pch=15,col="tomato")
+# points(8.5,6.5,pch=15,col="steelblue")
+# text(8.6,7,"Weibull",pos=4,cex=0.9)
+# text(8.6,6.5,"Cox",pos=4,cex=0.9)
+# par(op)
 
 
 op <- par(mar=c(4,3,3,1))
@@ -655,6 +490,7 @@ rbind(apply(res[[4]]$cox.pooled.norm,1,function(X) c(mean(X),sd(X))),
       apply(res[[4]]$cox.pooled.chain,1,function(X) c(mean(X),sd(X))),
       apply(res[[4]]$cox.pooled.boot,1,function(X) c(mean(X),sd(X))))
 par(op)
+
 
 p1 <- t(do.call(cbind, lapply(res, function(l) l$PS.beta.norm)))
 p2 <- t(do.call(cbind, lapply(res, function(l) l$PS.beta.chain)))
@@ -687,7 +523,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity_package_version_1020_2.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_1020_method2.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -702,7 +538,7 @@ text(20.5,-.45,"Chains of Regressions",pos=4,cex=0.75)
 text(20.5,-.5,"Bootstrap",pos=4,cex=0.75)
 dev.off()
 
-########################################
+#
 par(op)
 
 o1 <- cbind(res[[1]]$cox.pooled.norm,res[[2]]$cox.pooled.norm)
@@ -714,7 +550,7 @@ test <- comb.coef(margin=1,o1,o2,o3)
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
 
-tiff(paste0(resdir,"Cox_coeff_package_version_1020_2.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"Cox_coeff_package_version_1020_method2.tif"),width=10,height=7,units='in',res=300)
 # tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)

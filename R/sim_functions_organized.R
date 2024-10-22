@@ -51,7 +51,10 @@
 
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
-                         my.presc.K=1,tie.method="efron",interact=FALSE,method="all"){
+                         my.presc.K=1,tie.method="efron",interact=FALSE,method="1",censtype="simple"){
+  # # test
+  # A=C
+
   if (is.null(E)){
     stop("E is required for survival data")
   }
@@ -288,33 +291,162 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   # summary statistics for the ord method
   norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
 
-  # return survival outcome version
-  if (method=="all"){
-    return(list(n=length(Y),P=P,Common.P=Common.P,P.ord=P.ord,
-                coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
-                P.presc.topK=P.presc.topK,
-                prescription.mode.topK=prescription.mode.topK,
-                simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-                simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-                cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-                covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens, # censtype == "covbump"
-                adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-                Corr.norm = norm.spec$corr.norm,
-                Quants.norm = norm.spec$quants.norm,
-                logHR.X=cox.coef.adjusted[[1]]
-                # N.X=N.X, P.time=P.time, # used in testing
-                # control.events=control.events,compare.events=compare.events, # used in testing
-                # control.rate=control.rate,compare.rate=compare.rate, # used in testing
-                # adj.vcov.event=adj.vcov.event, # used in testing
-                # cox.coef.adjusted=cox.coef.adjusted, # used in testing
-                # cox.vcov=cox.vcov, # used in testing
-                # cox.fit.event=cox.adjusted, # used in testing
-                # cox.fit.cens=cox.adjusted.cens,
-                # Corr.ord=Corr.ord,propensity=ps.by.x, propensity.vcov=ps.vcov, P.presc=P.presc, cStat=ps.c, prescription.mode=prescription.mode,
-                # simple.vcov.cens=simple.vcov.cens, simplebump.vcov.cens=simplebump.vcov.cens, cov.vcov.cens=cov.vcov.cens, covbump.vcov.cens=covbump.vcov.cens,
-                ))
-  }
+  # return specific variables for different censor types/ methods
+  output_vars = switch(as.character(method),
+                       "all" = switch(censtype,
+                                      "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                      Coef.cat=coef.AonB, # method 2+3
+                                                      P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                      P=P,Common.P=Common.P, # method 2
+                                                      Coef.bin=coef.chain, # method 3
+                                                      simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
+                                      "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                          Coef.cat=coef.AonB, # method 2+3
+                                                          P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                          P=P,Common.P=Common.P, # method 2
+                                                          Coef.bin=coef.chain, # method 3
+                                                          simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
+                                      "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                   Coef.cat=coef.AonB, # method 2+3
+                                                   P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                   P=P,Common.P=Common.P, # method 2
+                                                   Coef.bin=coef.chain, # method 3
+                                                   cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
+                                      "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                       Coef.cat=coef.AonB, # method 2+3
+                                                       P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                       P=P,Common.P=Common.P, # method 2
+                                                       Coef.bin=coef.chain, # method 3
+                                                       covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)),
+                       "1" = switch(censtype,
+                                    "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                    P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                    simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
+                                    "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                        P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                        simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
+                                    "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                 cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
+                                    "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                     P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                                                     covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)),
+                       "2" = switch(censtype,
+                                    "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                    Coef.cat=coef.AonB, # method 2+3
+                                                    P=P,Common.P=Common.P, # method 2
+                                                    simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
+                                    "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                        Coef.cat=coef.AonB, # method 2+3
+                                                        P=P,Common.P=Common.P, # method 2
+                                                        simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
+                                    "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                 Coef.cat=coef.AonB, # method 2+3
+                                                 P=P,Common.P=Common.P, # method 2
+                                                 cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
+                                    "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                     Coef.cat=coef.AonB, # method 2+3
+                                                     P=P,Common.P=Common.P, # method 2
+                                                     covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)),
+                       "3" = switch(censtype,
+                                    "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                    Coef.cat=coef.AonB, # method 2+3
+                                                    Coef.bin=coef.chain, # method 3
+                                                    simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
+                                    "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                        Coef.cat=coef.AonB, # method 2+3
+                                                        Coef.bin=coef.chain, # method 3
+                                                        simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
+                                    "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                 Coef.cat=coef.AonB, # method 2+3
+                                                 Coef.bin=coef.chain, # method 3
+                                                 cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
+                                    "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
+                                                     Coef.cat=coef.AonB, # method 2+3
+                                                     Coef.bin=coef.chain, # method 3
+                                                     covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)))
+
+
+  return (c(list(n=length(Y),
+            P.presc.topK=P.presc.topK,
+            prescription.mode.topK=prescription.mode.topK,
+            adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+            logHR.X=cox.coef.adjusted[[1]]),output_vars))
 }
+
+
+#   # return survival outcome version
+#   if (method=="all"){
+#     return(list(coef.XonZ=coef.XonZ, # method 1+2+3
+#                 Coef.cat=coef.AonB, # method 2+3
+#                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+#                 P=P,Common.P=Common.P, # method 2
+#                 Coef.bin=coef.chain, # method 3
+#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
+#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
+#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
+#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens, # censtype == "covbump"
+#                 n=length(Y),
+#                 P.presc.topK=P.presc.topK,
+#                 prescription.mode.topK=prescription.mode.topK,
+#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+#                 logHR.X=cox.coef.adjusted[[1]]
+#                 # N.X=N.X, P.time=P.time, # used in testing
+#                 # control.events=control.events,compare.events=compare.events, # used in testing
+#                 # control.rate=control.rate,compare.rate=compare.rate, # used in testing
+#                 # adj.vcov.event=adj.vcov.event, # used in testing
+#                 # cox.coef.adjusted=cox.coef.adjusted, # used in testing
+#                 # cox.vcov=cox.vcov, # used in testing
+#                 # cox.fit.event=cox.adjusted, # used in testing
+#                 # cox.fit.cens=cox.adjusted.cens,
+#                 # Corr.ord=Corr.ord,propensity=ps.by.x, propensity.vcov=ps.vcov, P.presc=P.presc, cStat=ps.c, prescription.mode=prescription.mode,
+#                 # simple.vcov.cens=simple.vcov.cens, simplebump.vcov.cens=simplebump.vcov.cens, cov.vcov.cens=cov.vcov.cens, covbump.vcov.cens=covbump.vcov.cens,
+#                 ))
+#   } else if(method==1){ # method 1 .gencov.ord
+#     return(list(n=length(Y),
+#                 P.presc.topK=P.presc.topK,
+#                 prescription.mode.topK=prescription.mode.topK,
+#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+#                 logHR.X=cox.coef.adjusted[[1]],
+#                 coef.XonZ=coef.XonZ, # method 1+2+3
+#                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
+#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
+#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
+#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
+#                 ))
+#   } else if(method==2){ # method 2 .gencov
+#     return(list(n=length(Y),
+#                 P.presc.topK=P.presc.topK,
+#                 prescription.mode.topK=prescription.mode.topK,
+#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+#                 logHR.X=cox.coef.adjusted[[1]],
+#                 coef.XonZ=coef.XonZ, # method 1+2+3
+#                 Coef.cat=coef.AonB, # method 2+3
+#                 P=P,Common.P=Common.P, # method 2
+#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
+#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
+#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
+#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
+#                 ))
+#   } else if(method==3){ # method 3 .gencov.chain
+#     return(list(n=length(Y),
+#                 P.presc.topK=P.presc.topK,
+#                 prescription.mode.topK=prescription.mode.topK,
+#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
+#                 logHR.X=cox.coef.adjusted[[1]],
+#                 coef.XonZ=coef.XonZ, # method 1+2+3
+#                 Coef.cat=coef.AonB, # method 2+3
+#                 Coef.bin=coef.chain, # method 3
+#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
+#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
+#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
+#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
+#                 ))
+#   } else {
+#     stop("method must be all, 1, 2, or 3")
+#   }
+# }
 
 
 get.summstat.binary <- function(Y,X,B,A){
@@ -475,21 +607,28 @@ get.summstat.binary <- function(Y,X,B,A){
                     bincorr=diag(length(margprob)),
                     sigma=diag(length(margprob)),
                     colnames=NULL, simulvals=NULL) {
+  # # test
+  # margprob=P
+  # commonprob=Common.P
+  # bincorr=diag(length(margprob))
+  # sigma=diag(length(margprob))
+  # colnames=NULL
+  # simulvals=NULL
 
   if(missing(sigma))
-  {
-    if(!missing(commonprob))
     {
-      if (missing(margprob))
-        margprob <- diag(commonprob)
-      sigma <- commonprob2sigma(commonprob, simulvals)
+      if(!missing(commonprob))
+        {
+          if (missing(margprob))
+            margprob <- diag(commonprob)
+          sigma <- commonprob2sigma(commonprob, simulvals)
+        }
+      else if(!missing(bincorr))
+        {
+          commonprob <- bincorr2commonprob(margprob, bincorr)
+          sigma <- commonprob2sigma(commonprob, simulvals)
+        }
     }
-    else if(!missing(bincorr))
-    {
-      commonprob <- bincorr2commonprob(margprob, bincorr)
-      sigma <- commonprob2sigma(commonprob, simulvals)
-    }
-  }
   else if (any(eigen(sigma)$values<0))
     stop ("Sigma is not positive definite.")
 
@@ -664,13 +803,13 @@ get.summstat.binary <- function(Y,X,B,A){
                               P.presc.topK=NULL, prescription.mode.topK=NULL # censtype%in%c("simplebump","covbump")
                               )
   {
-  # test 10.20
+  # # test 10.20
   # noX=FALSE
 
 
-  if (is.null(coef.cens) || is.null(scale.cens) || is.null(coef.event) || is.null(scale.event)){
-    stop("For survival outcome, coef.cens, scale.cens, coef.event, and scale.event must be specified")
-  }
+  # if (is.null(coef.cens) || is.null(scale.cens) || is.null(coef.event) || is.null(scale.event)){
+  #   stop("For survival outcome, coef.cens, scale.cens, coef.event, and scale.event must be specified")
+  # }
   if (method == 4 && is.null(user.data)) stop("User data must be provided for method 4")
 
   ### set up specified HR of X
@@ -878,10 +1017,10 @@ get.summstat.binary <- function(Y,X,B,A){
 
 # Functions for generating data ----
 generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
-  # test 10.20
+  # # test 10.20
   # censtype="simple"
   # trunc=365
-  # method=1
+  # method=2
   # set.logHR.X=NULL
   # i=1
 
@@ -934,15 +1073,37 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
     prescription.mode.topK <- if (censtype %in% c("simplebump", "covbump")) SS$prescription.mode.topK else NULL
 
     ## generate site specific data
-    DS <- .gendata.survival(
-      logHR.X.site = logHR.X.site,
-      n = n, P = P, Common.P = Common.P, coef.XonZ = coef.XonZ,
-      coef.cens = coef.cens, scale.cens = scale.cens,
-      coef.event = coef.event, scale.event = scale.event,
-      censtype = censtype, trunc = trunc, coef.chain = coef.chain, coef.AonB = coef.AonB,
-      P.presc.topK = P.presc.topK, prescription.mode.topK = prescription.mode.topK,
-      method = method, Corr.norm = Corr.norm, Quant.norm = Quant.norm, P.ord = P.ord
-    )
+    if (method==1){
+      DS <- .gendata.survival(
+        logHR.X.site = logHR.X.site,
+        n = n, coef.XonZ = coef.XonZ,
+        coef.cens = coef.cens, scale.cens = scale.cens,
+        coef.event = coef.event, scale.event = scale.event,
+        censtype = censtype, trunc = trunc,
+        P.presc.topK = P.presc.topK, prescription.mode.topK = prescription.mode.topK,
+        method = method, Corr.norm = Corr.norm, Quant.norm = Quant.norm, P.ord = P.ord
+      )
+    } else if (method==2){
+      DS <- .gendata.survival(
+        logHR.X.site = logHR.X.site,
+        n = n, P = P, Common.P = Common.P, coef.XonZ = coef.XonZ,
+        coef.cens = coef.cens, scale.cens = scale.cens,
+        coef.event = coef.event, scale.event = scale.event,
+        censtype = censtype, trunc = trunc, coef.AonB = coef.AonB,
+        P.presc.topK = P.presc.topK, prescription.mode.topK = prescription.mode.topK,
+        method = method
+      )
+    } else if (method==3){
+      DS <- .gendata.survival(
+        logHR.X.site = logHR.X.site,
+        n = n, coef.XonZ = coef.XonZ,
+        coef.cens = coef.cens, scale.cens = scale.cens,
+        coef.event = coef.event, scale.event = scale.event,
+        censtype = censtype, trunc = trunc, coef.chain = coef.chain, coef.AonB = coef.AonB,
+        P.presc.topK = P.presc.topK, prescription.mode.topK = prescription.mode.topK,
+        method = method
+      )
+    } # else if (method==4){}
 
     # TODO: method 4 need to be tested
 
