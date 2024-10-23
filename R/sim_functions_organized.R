@@ -51,7 +51,7 @@
 
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
-                         my.presc.K=1,tie.method="efron",interact=FALSE,method="1",censtype="simple"){
+                         my.presc.K=1,tie.method="efron",interact=FALSE,method="all",censtype="simple"){
   # # test
   # A=C
 
@@ -375,81 +375,11 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
 }
 
 
-#   # return survival outcome version
-#   if (method=="all"){
-#     return(list(coef.XonZ=coef.XonZ, # method 1+2+3
-#                 Coef.cat=coef.AonB, # method 2+3
-#                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-#                 P=P,Common.P=Common.P, # method 2
-#                 Coef.bin=coef.chain, # method 3
-#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens, # censtype == "covbump"
-#                 n=length(Y),
-#                 P.presc.topK=P.presc.topK,
-#                 prescription.mode.topK=prescription.mode.topK,
-#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-#                 logHR.X=cox.coef.adjusted[[1]]
-#                 # N.X=N.X, P.time=P.time, # used in testing
-#                 # control.events=control.events,compare.events=compare.events, # used in testing
-#                 # control.rate=control.rate,compare.rate=compare.rate, # used in testing
-#                 # adj.vcov.event=adj.vcov.event, # used in testing
-#                 # cox.coef.adjusted=cox.coef.adjusted, # used in testing
-#                 # cox.vcov=cox.vcov, # used in testing
-#                 # cox.fit.event=cox.adjusted, # used in testing
-#                 # cox.fit.cens=cox.adjusted.cens,
-#                 # Corr.ord=Corr.ord,propensity=ps.by.x, propensity.vcov=ps.vcov, P.presc=P.presc, cStat=ps.c, prescription.mode=prescription.mode,
-#                 # simple.vcov.cens=simple.vcov.cens, simplebump.vcov.cens=simplebump.vcov.cens, cov.vcov.cens=cov.vcov.cens, covbump.vcov.cens=covbump.vcov.cens,
-#                 ))
-#   } else if(method==1){ # method 1 .gencov.ord
-#     return(list(n=length(Y),
-#                 P.presc.topK=P.presc.topK,
-#                 prescription.mode.topK=prescription.mode.topK,
-#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-#                 logHR.X=cox.coef.adjusted[[1]],
-#                 coef.XonZ=coef.XonZ, # method 1+2+3
-#                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
-#                 ))
-#   } else if(method==2){ # method 2 .gencov
-#     return(list(n=length(Y),
-#                 P.presc.topK=P.presc.topK,
-#                 prescription.mode.topK=prescription.mode.topK,
-#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-#                 logHR.X=cox.coef.adjusted[[1]],
-#                 coef.XonZ=coef.XonZ, # method 1+2+3
-#                 Coef.cat=coef.AonB, # method 2+3
-#                 P=P,Common.P=Common.P, # method 2
-#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
-#                 ))
-#   } else if(method==3){ # method 3 .gencov.chain
-#     return(list(n=length(Y),
-#                 P.presc.topK=P.presc.topK,
-#                 prescription.mode.topK=prescription.mode.topK,
-#                 adj.coef.event=adj.coef.event,adj.scale.event=adj.scale.event,
-#                 logHR.X=cox.coef.adjusted[[1]],
-#                 coef.XonZ=coef.XonZ, # method 1+2+3
-#                 Coef.cat=coef.AonB, # method 2+3
-#                 Coef.bin=coef.chain, # method 3
-#                 simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens, # censtype == "simple"
-#                 simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens, #censtype == "simplebump"
-#                 cov.coef.cens=cov.coef.cens,cov.scale.cens=cov.scale.cens, # censtype == "cov"
-#                 covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens # censtype == "covbump"
-#                 ))
-#   } else {
-#     stop("method must be all, 1, 2, or 3")
-#   }
-# }
+get.summstat.binary <- function(Y,X,B,A,method="all"){
+  # #test
+  # A=C
+  # method=1
 
-
-get.summstat.binary <- function(Y,X,B,A){
   glm.ctrl <- glm.control(epsilon = 1e-8, maxit = 25, trace = FALSE)
 
   ### (Correlated) binary covariates B
@@ -586,17 +516,42 @@ get.summstat.binary <- function(Y,X,B,A){
   # summary statistics for the ord method
   norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
 
-  # return binary outcome version
 
-  return(list(n=length(Y),
-              P=P,Common.P=Common.P,P.ord=P.ord,
-              coef.XonZ=coef.XonZ,Coef.bin=coef.chain, Coef.cat=coef.AonB,
-              coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
-              Corr.norm = norm.spec$corr.norm,
-              Quants.norm = norm.spec$quants.norm
-              # N.X=N.X,control.events=control.events,compare.events=compare.events,
-              # Corr.ord=Corr.ord,propensity=ps.by.x,propensity.vcov=ps.vcov,cStat=ps.c,
-  ))
+  # return binary outcome version
+  if (method=="all"){
+    return(list(n=length(Y),
+                coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
+                coef.XonZ=coef.XonZ, # method 1+2+3
+                Coef.cat=coef.AonB, # method 2+3
+                P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
+                P=P,Common.P=Common.P, # method 2
+                Coef.bin=coef.chain # method 3
+                )
+           )
+  } else if (method==1){
+    return(list(n=length(Y),
+                coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
+                coef.XonZ=coef.XonZ, # method 1+2+3
+                P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm # method 1
+                )
+           )
+  } else if (method==2){
+    return(list(n=length(Y),
+                coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
+                coef.XonZ=coef.XonZ, # method 1+2+3
+                Coef.cat=coef.AonB, # method 2+3
+                P=P,Common.P=Common.P # method 2
+                )
+           )
+  } else if (method==3){
+    return(list(n=length(Y),
+                coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
+                coef.XonZ=coef.XonZ, # method 1+2+3
+                Coef.cat=coef.AonB, # method 2+3
+                Coef.bin=coef.chain # method 3
+                )
+           )
+  } else { stop("Invalid method specified")}
 }
 #####
 
@@ -782,14 +737,6 @@ get.summstat.binary <- function(Y,X,B,A){
 }
 
 
-# .gendata.survival <- function(logHR.X.site=NULL, n, P, Common.P, coef.AonB=NULL, coef.XonZ,
-#                               coef.cens, scale.cens,
-#                               coef.event, scale.event,
-#                               censtype="simple", trunc=366,
-#                               P.presc.topK=NULL, prescription.mode.topK=NULL,
-#                               method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
-#                               coef.chain=NULL, user.data=NULL,noX=FALSE,
-#                               strat.var.cens=NULL,strat.var.event=NULL)
 .gendata.survival <- function(logHR.X.site=NULL, # optional
                               P.ord=NULL, Quant.norm=NULL, Corr.norm=NULL, # method 1 .gencov.ord
                               P, Common.P, # method 2 .gencov
@@ -1125,7 +1072,6 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 }
 
 
-# TODO: rename logOR
 generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
   n.sites<-length(Summ.Stat)
 
@@ -1144,12 +1090,29 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
     ## generate site specific data
 
     # TODO: method 4 working?
-
-    DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
-                         coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
-                         method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
-                         coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-                         set.logOR.X=set.logOR.X)
+    if (method==1){
+      DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
+                            method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
+                            coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
+                            set.logOR.X=set.logOR.X)
+    } else if (method==2){
+      DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
+                            coef.AonB=SS$Coef.cat,
+                            method=method,
+                            coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
+                            set.logOR.X=set.logOR.X)
+    } else if (method==3){
+      DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
+                            coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
+                            method=method,
+                            coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
+                            set.logOR.X=set.logOR.X)
+    } # else if (method==4){}
+    # DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
+    #                      coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
+    #                      method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
+    #                      coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
+    #                      set.logOR.X=set.logOR.X)
 
     ## save site specific data
     if (n.sites > 1) {
