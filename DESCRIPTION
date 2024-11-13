@@ -1,11 +1,11 @@
 Package: sim.realistic.data
-Title: What the Package Does (One Line, Title Case)
+Title: Simulating Realistic Time-to-Event or Binary Outcome with Covariates and Treatments Data that Protects Privacy
 Version: 0.0.0.9000
 Authors@R: 
     person("Yuexiang", "Peng", "yuexiang@uw.edu", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           comment = c(ORCID = "0009-0000-4451-8037"))
 Maintainer: Yuexiang Peng <yuexiang@uw.edu>
-Description: What the package does (one paragraph).
+Description: It is of interest to use realistic data for research patient-level data is not available. In this package, we propose simulation technique for utilizing summary information that captures important observed data. The package offers three methods for generating data and abstracting corresponding summary statistics needed. Functions in this package including abstracting summary statistics and generating data either with abstrcted or shared statistics from others.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
