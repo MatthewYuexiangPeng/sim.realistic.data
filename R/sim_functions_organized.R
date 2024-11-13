@@ -282,9 +282,8 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   adj.vcov.event <- vcov(adj.event)
 
   #### Hazard ratio estimated through Cox PH model, w/adjustment for treatment X and covariates Z
-  require(survival)
   # 9.24: add the cox.ctrl
-  cox.adjusted <- coxph(Surv(E, Y) ~ . , data=as.data.frame(model.matrix(~Z)[,-1]),
+  cox.adjusted <- survival::coxph(survival::Surv(E, Y) ~ . , data=as.data.frame(model.matrix(~Z)[,-1]),
                         method=tie.method,x=TRUE,control=cox.ctrl)
   # class(cox.adjusted) <- "coxph"
   cox.coef.adjusted <- coef(cox.adjusted)
@@ -292,7 +291,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   cox.vcov <- vcov(cox.adjusted)
 
   ## Cox censoring model for plasmode simulation
-  cox.adjusted.cens <-  coxph(Surv(E, 1-Y) ~ . , data=as.data.frame(model.matrix(~Z)[,-1]),
+  cox.adjusted.cens <-  survival::coxph(survival::Surv(E, 1-Y) ~ . , data=as.data.frame(model.matrix(~Z)[,-1]),
                               method=tie.method,x=TRUE,control=cox.ctrl)
   # class(cox.adjusted.cens) <- "coxph"
 
