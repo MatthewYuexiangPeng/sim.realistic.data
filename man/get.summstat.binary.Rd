@@ -26,3 +26,13 @@ a list of summary statistics
 \description{
 Title
 }
+\examples{
+data(example_data)
+E <- example_data$E
+Y <- example_data$Y
+X <- example_data$X
+B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
+A <- as.matrix(example_data[, c("A1", "A2")])
+summstat.binary <- get.summstat.binary(Y, X, B, A, method = "all")
+summstat.binary
+}

@@ -23,3 +23,9 @@ a dataframe with the generated survival data, where the columns are B, indicator
 \description{
 Title
 }
+\examples{
+data(summstat.binary)
+summstat.binary = list(summstat.binary)
+simulated_data_binary <- generate.data.binary(Summ.Stat=summstat.binary, method=1)
+head(simulated_data_binary)
+}

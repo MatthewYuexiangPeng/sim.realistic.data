@@ -35,3 +35,9 @@ a dataframe with the generated survival data, where the columns are B, indicator
 \description{
 Title
 }
+\examples{
+data(summstat.survival)
+summstat.survival = list(summstat.survival)
+simulated_data_survival <- generate.data.survival(Summ.Stat=summstat.survival,method=1)
+head(simulated_data_survival)
+}

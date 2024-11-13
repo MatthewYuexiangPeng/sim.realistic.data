@@ -71,7 +71,15 @@
 #' @export
 #'
 #' @examples
-get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
+#' data(example_data)
+#' E <- example_data$E
+#' Y <- example_data$Y
+#' X <- example_data$X
+#' B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
+#' A <- as.matrix(example_data[, c("A1", "A2")])
+#' summstat.survival <- get.summstat.survival(E, Y, X, B, A, method = "all")
+#' summstat.survival
+get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,365,by=30),
                          my.presc.K=1,tie.method="efron",method="all",censtype="simple")
   {
   # # test
@@ -408,6 +416,14 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
 #' @export
 #'
 #' @examples
+#' data(example_data)
+#' E <- example_data$E
+#' Y <- example_data$Y
+#' X <- example_data$X
+#' B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
+#' A <- as.matrix(example_data[, c("A1", "A2")])
+#' summstat.binary <- get.summstat.binary(Y, X, B, A, method = "all")
+#' summstat.binary
 get.summstat.binary <- function(Y,X,B,A,method="all"){
   # #test
   # A=C
@@ -742,7 +758,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
                               user.data=NULL,noX=FALSE, # method 4 user data
                               n, coef.XonZ, coef.AonB=NULL, # required
                               coef.event, scale.event, coef.cens, scale.cens,
-                              censtype="simple", trunc=366,
+                              censtype="simple", trunc=365,
                               method=1,
                               strat.var.cens=NULL,strat.var.event=NULL,
                               P.presc.topK=NULL, prescription.mode.topK=NULL # censtype%in%c("simplebump","covbump")
@@ -807,7 +823,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
     } else {
 
       censorT <- rep(0,times=n)
-      censorT[strat.var.cens==0] <- ceiling((-log(u[strat.var.cens==0])*exp(
+      censorT[strat.var.cens==0] <- ceiling((-log(u[strat.var.cens==0])*exp( # TODO: strat.var.cens missing
         cbind(1,X,Z.model.data)[strat.var.cens==0,] %*%
           coef.cens/scale.cens[[1]] ))^(scale.cens[[1]]))
       censorT[strat.var.cens==1] <- ceiling((-log(u[strat.var.cens==1])*exp(
@@ -980,6 +996,10 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 #' @export
 #'
 #' @examples
+#' data(summstat.survival)
+#' summstat.survival = list(summstat.survival)
+#' simulated_data_survival <- generate.data.survival(Summ.Stat=summstat.survival,method=1)
+#' head(simulated_data_survival)
 generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
   # # test 10.20
   # censtype="simple"
@@ -1105,6 +1125,10 @@ generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365
 #' @export
 #'
 #' @examples
+#' data(summstat.binary)
+#' summstat.binary = list(summstat.binary)
+#' simulated_data_binary <- generate.data.binary(Summ.Stat=summstat.binary, method=1)
+#' head(simulated_data_binary)
 generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
   # # test 11.12
   # method=2
@@ -1112,7 +1136,6 @@ generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
   # i=1
 
   n.sites<-length(Summ.Stat)
-  if(is.null(n)) {n <- SS$n}
 
   ## Data.Site: simulated data across sites
   Data.Simulated <- NULL
@@ -1126,6 +1149,7 @@ generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
   {
     ## read in summary statistics SS
     SS <- Summ.Stat[[i]]
+    if(is.null(n)) {n <- SS$n}
     ## generate site specific data
 
     # TODO: method 4 working?
