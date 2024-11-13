@@ -226,9 +226,9 @@ for (c in 1:n_cores) {
   for (sim in 1:n.sim) {
     # test binary
     ## simulate data using multivariate normal
-    sim.dat.norm <- generate.data.binary(Summ.Stat,method=2)$Data.Simulated # 1
+    sim.dat.norm <- generate.data.binary(Summ.Stat,method=2) # 1
     ## simulate data using covariate chain
-    sim.dat.chain <- generate.data.binary(Summ.Stat,method=2)$Data.Simulated # 3
+    sim.dat.chain <- generate.data.binary(Summ.Stat,method=2) # 3
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL

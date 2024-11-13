@@ -50,6 +50,27 @@
 
 
 # Functions to get summary statistics ----
+#' Title
+#'
+#' @param E a numeric vector of event times
+#' @param Y a binary vector of outcomes
+#' @param X a binary vector of exposures
+#' @param B a matrix of binary covariates, with each column representing a covariate
+#' @param A a matrix of categorical covariates, with each column representing a covariate
+#' @param prescription.mode a numeric vector of prescription modes for exposures
+#' @param my.presc.K a numeric value of the number of prescription modes to be used
+#' @param tie.method specifies the method for handling ties in the Cox proportional hazards model, with options including 'efron', 'breslow', and 'exact'
+#' @param method specify the type of summary statistics abstracted corresponding to the data generation method,
+#' with options including 'all', 1, 2, 3. 'all' will return all summary statistics can be used for generate data with three methods,
+#' while 1, 2, 3 corresponding to the multivariate normal thresholding for A and B, the multivariate normal thresholding only for B,
+#' and the chain of regression methods, respectively. See more details in the manuscript.
+#' @param censtype specify the type of censoring, with options including 'simple', 'simplebump', 'cov', and 'covbump',
+#' see more details in the manuscript
+#'
+#' @return a list of summary statistics
+#' @export
+#'
+#' @examples
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
                          my.presc.K=1,tie.method="efron",method="all",censtype="simple")
   {
@@ -373,6 +394,21 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
 }
 
 
+#' Title
+#'
+#' @param Y a binary vector of outcomes
+#' @param X a binary vector of exposures
+#' @param B a matrix of binary covariates, with each column representing a covariate
+#' @param A a matrix of categorical covariates, with each column representing a covariate
+#' @param method specify the type of summary statistics abstracted corresponding to the data generation method,
+#' with options including 'all', 1, 2, 3. 'all' will return all summary statistics can be used for generate data with three methods,
+#' while 1, 2, 3 corresponding to the multivariate normal thresholding for A and B, the multivariate normal thresholding only for B,
+#' and the chain of regression methods, respectively. See more details in the manuscript.
+#'
+#' @return a list of summary statistics
+#' @export
+#'
+#' @examples
 get.summstat.binary <- function(Y,X,B,A,method="all"){
   # #test
   # A=C
@@ -929,7 +965,23 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 
 
 # Functions for generating data ----
-generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
+#' Title
+#'
+#' @param Summ.Stat a nested list where each element is a list of summary statistics for a specific data site, formatted consistently with the output from the get.summstat.survival function
+#' @param n the number of samples to generate, the default is using the sample size from the summary statistics
+#' @param censtype specify the type of censoring, with options including 'simple', 'simplebump', 'cov', and 'covbump',
+#' see more details in the manuscript
+#' @param trunc the truncation time for the survival data
+#' @param method specify the type of data generation method, which consistent with the summary statistics input.
+#' Options including 1, 2, 3, corresponding to the multivariate normal thresholding for A and B, the multivariate normal thresholding only for B,
+#' and the chain of regression methods, respectively. See more details in the manuscript.
+#' @param set.logHR.X user can manually specify the log hazard ratio for the exposure variable X. If NULL, it use the log hazard ratio from the summary statistics.
+#'
+#' @return a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, E, and site
+#' @export
+#'
+#' @examples
+generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
   # # test 10.20
   # censtype="simple"
   # trunc=365
@@ -953,7 +1005,7 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
     SS <- Summ.Stat[[i]]
     ## get common parameters
     if(is.null(set.logHR.X)) {logHR.X.site <- SS$logHR.X} else {logHR.X.site <- set.logHR.X}
-    n <- SS$n
+    if(is.null(n)) {n <- SS$n}
     coef.XonZ <- SS$coef.XonZ
     coef.event <- SS$adj.coef.event
     scale.event <- SS$adj.scale.event
@@ -1036,17 +1088,32 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 
   }
 
-  return(list(Data.Simulated=Data.Simulated,Data.Marginal=Data.Marg))
+  # return(list(Data.Simulated=Data.Simulated,Data.Marginal=Data.Marg)) # Data.Marginal seems not useful?
+  return(Data.Simulated)
 }
 
 
-generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
+#' Title
+#'
+#' @param Summ.Stat a nested list where each element is a list of summary statistics for a specific data site, formatted consistently with the output from the get.summstat.binary function
+#' @param n the number of samples to generate, the default is using the sample size from the summary statistics
+#' @param method specify the type of data generation method, which consistent with the summary statistics input.
+#' Options including 1, 2, 3, corresponding to the multivariate normal thresholding for A and B, the multivariate normal thresholding only for B,
+#' and the chain of regression methods, respectively. See more details in the manuscript.
+#' @param set.logOR.X user can manually specify the log ODDs ratio for the exposure variable X. If NULL, it use the log ODDs ratio from the summary statistics.
+#'
+#' @return a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, and site
+#' @export
+#'
+#' @examples
+generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
   # # test 11.12
   # method=2
   # set.logOR.X=NULL
   # i=1
 
   n.sites<-length(Summ.Stat)
+  if(is.null(n)) {n <- SS$n}
 
   ## Data.Site: simulated data across sites
   Data.Simulated <- NULL
@@ -1064,24 +1131,24 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
 
     # TODO: method 4 working?
     if (method==1){
-      DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
+      DS <- .gendata.binary(n=n, coef.XonZ=SS$coef.XonZ,
                             method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
                             logOR.X=set.logOR.X)
     } else if (method==2){
-      DS <- .gendata.binary(n=SS$n, Corr.norm.B=SS$Corr.norm.B, Quant.norm.B=SS$Quants.norm.B, coef.XonZ=SS$coef.XonZ,
+      DS <- .gendata.binary(n=n, Corr.norm.B=SS$Corr.norm.B, Quant.norm.B=SS$Quants.norm.B, coef.XonZ=SS$coef.XonZ,
                             coef.AonB=SS$Coef.cat,
                             method=method,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
                             logOR.X=set.logOR.X)
     } else if (method==3){
-      DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
+      DS <- .gendata.binary(n=n, coef.XonZ=SS$coef.XonZ,
                             coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
                             method=method,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
                             logOR.X=set.logOR.X)
     } # else if (method==4){}
-    # DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
+    # DS <- .gendata.binary(n=n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
     #                      coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
     #                      method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
     #                      coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
@@ -1098,7 +1165,8 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
 
   }
 
-  return(list(Data.Simulated=Data.Simulated,Data.Marginal=Data.Marg))
+  # return(list(Data.Simulated=Data.Simulated,Data.Marginal=Data.Marg))
+  return(Data.Simulated)
 }
 
 

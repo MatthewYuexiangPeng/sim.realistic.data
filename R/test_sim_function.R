@@ -224,8 +224,8 @@ for (c in 1:n_cores) {
   common.prob.boot <- sapply(1:n.sim, function(XX) NULL)
 
   for (sim in 1:n.sim) {
-    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2)$Data.Simulated # 1
-    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2)$Data.Simulated # 3
+    sim.dat.norm <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2) # 1
+    sim.dat.chain <- generate.data.survival(Summ.Stat, censtype = censtype, trunc = 366, method = 2) # 3
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL
