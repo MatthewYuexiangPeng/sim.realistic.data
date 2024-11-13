@@ -51,7 +51,8 @@
 
 # Functions to get summary statistics ----
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30),
-                         my.presc.K=1,tie.method="efron",interact=FALSE,method="all",censtype="simple"){
+                         my.presc.K=1,tie.method="efron",method="all",censtype="simple")
+  {
   # # test
   # A=C
 
@@ -71,6 +72,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   P <- apply(as.matrix(B),2,function(XX){as.numeric(table(XX)[[2]]/sum(table(XX)))})
   #### Common probability, i.e. number of one's shared by each pair of binary variables divided by sample size
   Common.P <- t(as.matrix(B))%*%as.matrix(B)/nrow(B)
+  Corr.B <- cor(B)
 
   ### Categorical variables A
   #### Intercept and coefficients from multinomial regression for categorical variables, fitted on all binary covariates B.
@@ -205,14 +207,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   #### CENSORING DISTRIBUTION ####
 
   # Covariate matrix
-  if (interact) {
-    interact.X.covs <- cbind(B,A.indicator)*X
-    colnames(interact.X.covs) <- paste("X",colnames(interact.X.covs),sep="_")
-    Z <- cbind(X, cbind(B,A.indicator,interact.X.covs))
-  } else {
-    Z <- cbind(X, B, A.indicator)
-  }
-
+  Z <- cbind(X, B, A.indicator)
 
   # Simple Censoring No Bumps
   simple.cens <- survival::survreg(survival::Surv(E, 1-Y) ~ 1, dist="weib")
@@ -291,31 +286,34 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
   # summary statistics for the ord method
   norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
 
+  # for the
+  norm.spec.B <- .ordtonorm(probs=lapply(P,FUN=function(x){c(1-x,x)}), Cor=Corr.B)
+
   # return specific variables for different censor types/ methods
   output_vars = switch(as.character(method),
                        "all" = switch(censtype,
                                       "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                       Coef.cat=coef.AonB, # method 2+3
                                                       P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-                                                      P=P,Common.P=Common.P, # method 2
+                                                      Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm, # method 2
                                                       Coef.bin=coef.chain, # method 3
                                                       simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
                                       "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                           Coef.cat=coef.AonB, # method 2+3
                                                           P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-                                                          P=P,Common.P=Common.P, # method 2
+                                                          Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm, # method 2
                                                           Coef.bin=coef.chain, # method 3
                                                           simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
                                       "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                    Coef.cat=coef.AonB, # method 2+3
                                                    P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-                                                   P=P,Common.P=Common.P, # method 2
+                                                   Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm, # method 2
                                                    Coef.bin=coef.chain, # method 3
                                                    cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
                                       "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                        Coef.cat=coef.AonB, # method 2+3
                                                        P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-                                                       P=P,Common.P=Common.P, # method 2
+                                                       Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm, # method 2
                                                        Coef.bin=coef.chain, # method 3
                                                        covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)),
                        "1" = switch(censtype,
@@ -334,19 +332,19 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,trunc,by=30
                        "2" = switch(censtype,
                                     "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                     Coef.cat=coef.AonB, # method 2+3
-                                                    P=P,Common.P=Common.P, # method 2
+                                                    Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm,# method 2
                                                     simple.coef.cens=simple.coef.cens, simple.scale.cens=simple.scale.cens),
                                     "simplebump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                         Coef.cat=coef.AonB, # method 2+3
-                                                        P=P,Common.P=Common.P, # method 2
+                                                        Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm,# method 2
                                                         simplebump.coef.cens=simplebump.coef.cens, simplebump.scale.cens=simplebump.scale.cens),
                                     "cov" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                  Coef.cat=coef.AonB, # method 2+3
-                                                 P=P,Common.P=Common.P, # method 2
+                                                 Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm,# method 2
                                                  cov.coef.cens=cov.coef.cens, cov.scale.cens=cov.scale.cens),
                                     "covbump" = list(coef.XonZ=coef.XonZ, # method 1+2+3
                                                      Coef.cat=coef.AonB, # method 2+3
-                                                     P=P,Common.P=Common.P, # method 2
+                                                     Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm,# method 2
                                                      covbump.coef.cens=covbump.coef.cens, covbump.scale.cens=covbump.scale.cens)),
                        "3" = switch(censtype,
                                     "simple" = list(coef.XonZ=coef.XonZ, # method 1+2+3
@@ -390,6 +388,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   P <- apply(as.matrix(B),2,function(XX){as.numeric(table(XX)[[2]]/sum(table(XX)))})
   #### Common probability, i.e. number of one's shared by each pair of binary variables divided by sample size
   Common.P <- t(as.matrix(B))%*%as.matrix(B)/nrow(B)
+  Corr.B <- cor(B)
 
   ## Categorical variables A
   #### Intercept and coefficients from multinomial regression for categorical variables, fitted on all binary covariates B.
@@ -516,6 +515,8 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   # summary statistics for the ord method
   norm.spec <- .ordtonorm(probs=P.ord, Cor=Corr.ord)
 
+  norm.spec.B <- .ordtonorm(probs=lapply(P,FUN=function(x){c(1-x,x)}), Cor=Corr.B)
+
 
   # return binary outcome version
   if (method=="all"){
@@ -524,7 +525,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
                 coef.XonZ=coef.XonZ, # method 1+2+3
                 Coef.cat=coef.AonB, # method 2+3
                 P.ord=P.ord,Quants.norm = norm.spec$quants.norm,Corr.norm = norm.spec$corr.norm, # method 1
-                P=P,Common.P=Common.P, # method 2
+                Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm, # method 2
                 Coef.bin=coef.chain # method 3
                 )
            )
@@ -540,7 +541,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
                 coef.Yon1=coef.Yon1,coef.YonX=coef.YonX,coef.YonZ=coef.YonZ,
                 coef.XonZ=coef.XonZ, # method 1+2+3
                 Coef.cat=coef.AonB, # method 2+3
-                P=P,Common.P=Common.P # method 2
+                Quants.norm.B = norm.spec.B$quants.norm,Corr.norm.B = norm.spec.B$corr.norm # method 2
                 )
            )
   } else if (method==3){
@@ -557,44 +558,6 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 
 
 # Hidden functions used to generate data ----
-.rmvbin <- function (n, margprob,
-                    commonprob=diag(margprob),
-                    bincorr=diag(length(margprob)),
-                    sigma=diag(length(margprob)),
-                    colnames=NULL, simulvals=NULL) {
-  # # test
-  # margprob=P
-  # commonprob=Common.P
-  # bincorr=diag(length(margprob))
-  # sigma=diag(length(margprob))
-  # colnames=NULL
-  # simulvals=NULL
-
-  if(missing(sigma))
-    {
-      if(!missing(commonprob))
-        {
-          if (missing(margprob))
-            margprob <- diag(commonprob)
-          sigma <- commonprob2sigma(commonprob, simulvals)
-        }
-      else if(!missing(bincorr))
-        {
-          commonprob <- bincorr2commonprob(margprob, bincorr)
-          sigma <- commonprob2sigma(commonprob, simulvals)
-        }
-    }
-  else if (any(eigen(sigma)$values<0))
-    stop ("Sigma is not positive definite.")
-
-  retval <- rmvnorm(n, qnorm(margprob, sd = sqrt(diag(sigma))), as.matrix(sigma))
-  retval <- ra2ba(retval)
-  dimnames(retval) <- list(NULL, colnames)
-  retval
-}
-# reference: https://github.com/millerjoey/bindata_rmvbin/blob/master/rmvbin_source.R
-
-
 .ordgendata <- function(n, sigma, quants.norm){
   retval = mvtnorm::rmvnorm(n = n, sigma = sigma)
   for (i in 1:ncol(sigma)) {
@@ -605,8 +568,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 }
 
 
-.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){ # TODO: Corr.norm?Quant.norm?
-
+.gencov.ord <- function(n, P.ord, Quant.norm, Corr.norm, coef.XonZ){
   Z <- .ordgendata(n, sigma=Corr.norm, quants.norm=Quant.norm)
   n.B <- length(which(unlist(lapply(P.ord,FUN=function(x){length(x)})==2)))
   n.A <- ncol(Z) - n.B
@@ -646,8 +608,9 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 }
 
 
-.gencov <- function(n, P, Common.P, coef.AonB, coef.XonZ){
-  B <- .rmvbin(n, margprob=P, commonprob=Common.P)
+.gencov <- function(n, Corr.norm.B, Quant.norm.B, coef.AonB, coef.XonZ){
+  B <- .ordgendata(n, sigma=Corr.norm.B, quants.norm=Quant.norm.B)
+  # B <- .rmvbin(n, margprob=P, commonprob=Common.P) # TODO: replace
 
   ### Categorical variables A
   ## Obtain correct predicted probabilities from multinomial coefficients by person
@@ -734,12 +697,12 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 
 
   return(list(X=X, B=B, A.indicator=A.indicator))
-}
+} # TODO: intuitive, capture more info? but no theory; different property compares to other method?
 
 
 .gendata.survival <- function(logHR.X.site=NULL, # optional
                               P.ord=NULL, Quant.norm=NULL, Corr.norm=NULL, # method 1 .gencov.ord
-                              P, Common.P, # method 2 .gencov
+                              Corr.norm.B=NULL, Quant.norm.B=NULL, # method 2 .gencov
                               coef.chain=NULL, # method 3 .gencov.chain
                               user.data=NULL,noX=FALSE, # method 4 user data
                               n, coef.XonZ, coef.AonB=NULL, # required
@@ -767,7 +730,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   ### Generate covariates via specified method
   exppluscovs <- switch(method,
                         `1` = .gencov.ord(n, P.ord, Quant.norm, Corr.norm, coef.XonZ),
-                        `2` = .gencov(n, P, Common.P, coef.AonB, coef.XonZ),
+                        `2` = .gencov(n, Corr.norm.B, Quant.norm.B, coef.AonB, coef.XonZ),
                         `3` = .gencov.chain(n, coef.chain, coef.AonB, coef.XonZ),
                         `4` = {
                           exppluscovs <- list(B=NULL, A.indicator=NULL)
@@ -891,25 +854,28 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 }
 
 
-.gendata.binary <- function(n, P, Common.P, coef.AonB=NULL, coef.XonZ,
-                            method=1, Corr.norm=NULL, Quant.norm=NULL, P.ord=NULL,
-                            coef.chain=NULL, user.data=NULL,noX=FALSE,
-                            coef.Yon1, coef.YonX, coef.YonZ, set.logOR.X=NULL)
+.gendata.binary <- function(logOR.X=NULL, # optional
+                            P.ord=NULL, Corr.norm=NULL, Quant.norm=NULL,  # method 1 .gencov.ord
+                            Corr.norm.B=NULL, Quant.norm.B=NULL, # method 2 .gencov
+                            coef.chain=NULL, # method 3 .gencov.chain
+                            user.data=NULL,noX=FALSE, # method 4 user data
+                            n, coef.AonB=NULL, coef.XonZ, # required
+                            coef.Yon1, coef.YonX, coef.YonZ,
+                            method=1)
 {
-  # test 10.8
+  # # test 10.8
   # n=SS$n
   # P=SS$P
   # Common.P=SS$Common.P
   # coef.XonZ=SS$coef.XonZ
-  # coef.chain=SS$Coef.bin
   # coef.AonB=SS$Coef.cat
-  # method=method
-  # Corr.norm=SS$Corr.norm
-  # Quant.norm=SS$Quants.norm
-  # P.ord=SS$P.ord
+  # method=2
   # coef.Yon1=SS$coef.Yon1
   # coef.YonX=SS$coef.YonX
   # coef.YonZ=SS$coef.YonZ
+  # logOR.X=NULL
+  # Quant.norm.B=SS$Quants.norm.B
+  # Corr.norm.B=SS$Corr.norm.B
 
 
   if (is.null(coef.Yon1) || is.null(coef.YonX) || is.null(coef.YonZ)) {
@@ -918,15 +884,15 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   if (method == 4 && is.null(user.data)) stop("User data must be provided for method 4")
 
   ### Set custom coef.YonX if provided
-  if (!is.null(set.logOR.X)) {
-    coef.YonX <- set.logOR.X
+  if (!is.null(logOR.X)) {
+    coef.YonX <- logOR.X
   }
 
   ### Generate covariates via specified method
 
   exppluscovs <- switch(method, # 9.24: try this new code
                         `1` = .gencov.ord(n, P.ord, Quant.norm, Corr.norm, coef.XonZ),
-                        `2` = .gencov(n, P, Common.P, coef.AonB, coef.XonZ),
+                        `2` = .gencov(n, Corr.norm.B, Quant.norm.B, coef.AonB, coef.XonZ),
                         `3` = .gencov.chain(n, coef.chain, coef.AonB, coef.XonZ),
                         `4` = {
                           exppluscovs <- list(B=NULL,A.indicator=NULL)
@@ -988,16 +954,9 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
     ## get common parameters
     if(is.null(set.logHR.X)) {logHR.X.site <- SS$logHR.X} else {logHR.X.site <- set.logHR.X}
     n <- SS$n
-    P <- SS$P
-    Common.P <- SS$Common.P
     coef.XonZ <- SS$coef.XonZ
     coef.event <- SS$adj.coef.event
     scale.event <- SS$adj.scale.event
-    coef.chain <- SS$Coef.bin
-    coef.AonB <- SS$Coef.cat
-    Corr.norm <- SS$Corr.norm
-    Quant.norm <- SS$Quants.norm
-    P.ord <- SS$P.ord
 
     # set coef.cens and scale.cens for different methods
     if (censtype == "simple") {
@@ -1021,6 +980,10 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 
     ## generate site specific data
     if (method==1){
+      Corr.norm <- SS$Corr.norm
+      Quant.norm <- SS$Quants.norm
+      P.ord <- SS$P.ord
+
       DS <- .gendata.survival(
         logHR.X.site = logHR.X.site,
         n = n, coef.XonZ = coef.XonZ,
@@ -1031,9 +994,13 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
         method = method, Corr.norm = Corr.norm, Quant.norm = Quant.norm, P.ord = P.ord
       )
     } else if (method==2){
+      coef.AonB <- SS$Coef.cat
+      Corr.norm.B <- SS$Corr.norm.B
+      Quant.norm.B <- SS$Quants.norm.B
+
       DS <- .gendata.survival(
         logHR.X.site = logHR.X.site,
-        n = n, P = P, Common.P = Common.P, coef.XonZ = coef.XonZ,
+        n = n, Corr.norm.B=Corr.norm.B, Quant.norm.B=Quant.norm.B, coef.XonZ = coef.XonZ,
         coef.cens = coef.cens, scale.cens = scale.cens,
         coef.event = coef.event, scale.event = scale.event,
         censtype = censtype, trunc = trunc, coef.AonB = coef.AonB,
@@ -1041,6 +1008,9 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
         method = method
       )
     } else if (method==3){
+      coef.chain <- SS$Coef.bin
+      coef.AonB <- SS$Coef.cat
+
       DS <- .gendata.survival(
         logHR.X.site = logHR.X.site,
         n = n, coef.XonZ = coef.XonZ,
@@ -1051,8 +1021,6 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
         method = method
       )
     } # else if (method==4){}
-
-    # TODO: method 4 need to be tested
 
     if(is.null(DS)) stop("Censoring type is misspecified")
 
@@ -1073,6 +1041,11 @@ generate.data.survival <- function(Summ.Stat,censtype="simple", trunc=365,method
 
 
 generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
+  # # test 11.12
+  # method=2
+  # set.logOR.X=NULL
+  # i=1
+
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -1094,25 +1067,25 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
       DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
                             method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-                            set.logOR.X=set.logOR.X)
+                            logOR.X=set.logOR.X)
     } else if (method==2){
-      DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
+      DS <- .gendata.binary(n=SS$n, Corr.norm.B=SS$Corr.norm.B, Quant.norm.B=SS$Quants.norm.B, coef.XonZ=SS$coef.XonZ,
                             coef.AonB=SS$Coef.cat,
                             method=method,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-                            set.logOR.X=set.logOR.X)
+                            logOR.X=set.logOR.X)
     } else if (method==3){
       DS <- .gendata.binary(n=SS$n, coef.XonZ=SS$coef.XonZ,
                             coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
                             method=method,
                             coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-                            set.logOR.X=set.logOR.X)
+                            logOR.X=set.logOR.X)
     } # else if (method==4){}
     # DS <- .gendata.binary(n=SS$n, P=SS$P, Common.P=SS$Common.P, coef.XonZ=SS$coef.XonZ,
     #                      coef.chain=SS$Coef.bin, coef.AonB=SS$Coef.cat,
     #                      method=method, Corr.norm=SS$Corr.norm, Quant.norm=SS$Quants.norm, P.ord=SS$P.ord,
     #                      coef.Yon1=SS$coef.Yon1, coef.YonX=SS$coef.YonX, coef.YonZ=SS$coef.YonZ,
-    #                      set.logOR.X=set.logOR.X)
+    #                      logOR.X=set.logOR.X)
 
     ## save site specific data
     if (n.sites > 1) {
@@ -1130,7 +1103,4 @@ generate.data.binary <- function(Summ.Stat,method=1, set.logOR.X=NULL){
 
 
 # TODO:
-# only need some of the summary statiics for specific method (simplier output for summ func)
-# try method 4 with our data. separate into a function
-# delete dat.boot (add in the test file, doesn't matter)
 # add notations critical for the package

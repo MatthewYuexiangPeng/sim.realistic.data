@@ -94,7 +94,7 @@ system.time(
                                      # my.presc.K,tie.method)
 
     # test for get.summstat.binary function
-    SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C,method=3)
+    SS.list <- get.summstat.binary(Y=Y,X=X,B=B,A=C,method=2)
 
     SS.list <- append(SS.list, site, after=0)
 
@@ -114,14 +114,14 @@ system.time(
 )
 stopCluster(cl)
 proc.time() - begin
-saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241022_method3.rds"))
+saveRDS(Summ.Stat,paste0(resdir,"angio_summary_cov_chain_binary_241112_method2.rds"))
 
 
 
 ## Sample the same dataset that was used for summary statistics.
 ## This will be the basis for boostrap sampling. ----
 
-Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_241022_method3.rds"))
+Summ.Stat <- readRDS(paste0(resdir,"angio_summary_cov_chain_binary_241112_method2.rds"))
 
 names(Summ.Stat) <- sites
 dat.all <- do.call(rbind, lapply(1:5, function(XX) cbind(Summ.Stat[[XX]]$dat.boot,site=XX))) # Matthew: still need numeric
@@ -226,9 +226,9 @@ for (c in 1:n_cores) {
   for (sim in 1:n.sim) {
     # test binary
     ## simulate data using multivariate normal
-    sim.dat.norm <- generate.data.binary(Summ.Stat,method=3)$Data.Simulated # 1
+    sim.dat.norm <- generate.data.binary(Summ.Stat,method=2)$Data.Simulated # 1
     ## simulate data using covariate chain
-    sim.dat.chain <- generate.data.binary(Summ.Stat,method=3)$Data.Simulated # 3
+    sim.dat.chain <- generate.data.binary(Summ.Stat,method=2)$Data.Simulated # 3
 
     sim.dat.boot <- NULL
     sim.dat.boot0 <- NULL
@@ -317,7 +317,7 @@ end <- proc.time()[3]
 end - start
 #####
 
-saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_binary_241022_method3.rds"))
+saveRDS(res,paste0(resdir,"angio_datasim_cov_bootstarp_binary_241112_method2.rds"))
 
 
 # Plots -----
@@ -347,7 +347,7 @@ interleave <- function(m1,m2){
 }
 
 
-res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_binary_241022_method3.rds"))
+res <- readRDS(paste0(resdir,"angio_datasim_cov_bootstarp_binary_241112_method2.rds"))
 
 
 carr.norm <- array(NA,dim=c(11,11,sim_num))
@@ -524,7 +524,7 @@ apply(test,2,function(X) c(mean(X),sd(X)))
 # Matthew: this is for figure 2
 
 op <- par(mar=c(3,3,3,1))
-tiff(paste0(resdir,"pooled_propensity_package_version_binary_1022_method3.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"pooled_propensity_package_version_binary_1112_method2.tif"),width=10,height=7,units='in',res=300)
 boxplot(test1, ylim = c(-0.8,0.6), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
 # dev.off()
 axis(side=2,at=seq(-0.8,0.6,by = 0.2),cex.axis=0.85)
@@ -551,7 +551,7 @@ test <- comb.coef(margin=1,o1,o2,o3)
 apply(test,2,function(X) c(median(X),sd(X)))
 op <- par(mar=c(5,4,4,1))
 
-tiff(paste0(resdir,"Cox_coeff_package_version_binary_1022_method3.tif"),width=10,height=7,units='in',res=300)
+tiff(paste0(resdir,"Cox_coeff_package_version_binary_1112_method2.tif"),width=10,height=7,units='in',res=300)
 # tiff(paste0(resdir,"Logit_coeff_package_version.tif"),width=10,height=7,units='in',res=300)
 
 boxplot(test,ylim = c(-2,2), col=c(rgb(1,0,0,0.4),rgb(0,1,0,0.4),rgb(0,0,1,0.4)),axes=FALSE)
