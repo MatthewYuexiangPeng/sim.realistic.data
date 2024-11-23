@@ -25,6 +25,6 @@ This is a small demo of the `sim.realistic.data` package. The package is designe
 
 # The usage of get.summstat.survival function
 ```{r}
-library(sim.realistic.data)
+# library(sim.realistic.data)
 ```
 
