@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim_functions_organized.R
 \name{generate.data.survival}
 \alias{generate.data.survival}
-\title{Title}
+\title{Generating data with survival outcome}
 \usage{
 generate.data.survival(
   Summ.Stat,
@@ -33,11 +33,5 @@ and the chain of regression methods, respectively. See more details in the manus
 a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, E, and site
 }
 \description{
-Title
-}
-\examples{
-data(summstat.survival)
-summstat.survival = list(summstat.survival)
-simulated_data_survival <- generate.data.survival(Summ.Stat=summstat.survival,method=1)
-head(simulated_data_survival)
+Generating data with survival outcome
 }

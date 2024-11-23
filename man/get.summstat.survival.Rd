@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim_functions_organized.R
 \name{get.summstat.survival}
 \alias{get.summstat.survival}
-\title{Title}
+\title{Getting summary statistics for data with survival outcome}
 \usage{
 get.summstat.survival(
   E,
@@ -46,15 +46,5 @@ see more details in the manuscript}
 a list of summary statistics
 }
 \description{
-Title
-}
-\examples{
-data(example_data)
-E <- example_data$E
-Y <- example_data$Y
-X <- example_data$X
-B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
-A <- as.matrix(example_data[, c("A1", "A2")])
-summstat.survival <- get.summstat.survival(E, Y, X, B, A, method = "all")
-summstat.survival
+Getting summary statistics for data with survival outcome
 }

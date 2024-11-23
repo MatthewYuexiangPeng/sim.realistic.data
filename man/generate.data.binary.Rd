@@ -2,7 +2,7 @@
 % Please edit documentation in R/sim_functions_organized.R
 \name{generate.data.binary}
 \alias{generate.data.binary}
-\title{Title}
+\title{Generating data with binary outcome}
 \usage{
 generate.data.binary(Summ.Stat, n = NULL, method = 1, set.logOR.X = NULL)
 }
@@ -21,11 +21,5 @@ and the chain of regression methods, respectively. See more details in the manus
 a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, and site
 }
 \description{
-Title
-}
-\examples{
-data(summstat.binary)
-summstat.binary = list(summstat.binary)
-simulated_data_binary <- generate.data.binary(Summ.Stat=summstat.binary, method=1)
-head(simulated_data_binary)
+Generating data with binary outcome
 }
