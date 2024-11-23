@@ -1195,3 +1195,9 @@ generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
 
 # TODO:
 # add notations critical for the package
+# high dimensional?
+
+
+
+
+

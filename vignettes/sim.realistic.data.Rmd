@@ -1,0 +1,30 @@
+---
+title: "Small demo of the sim.realistic.data package"
+author: "Yuexiang Peng"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    toc: true
+    toc_float:
+      toc_collapsed: true
+    theme: united
+vignette: >
+  %\VignetteIndexEntry{Small demo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This is a small demo of the `sim.realistic.data` package. The package is designed to generate realistic data for simulation studies using shareable summary statistics. The package can be used for abstract summary statistics needed for data generation, and simulating data using the corresponding summary statistics as inputs. 
+
+# The usage of get.summstat.survival function
+```{r}
+library(sim.realistic.data)
+```
+
