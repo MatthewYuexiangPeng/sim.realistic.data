@@ -24,7 +24,65 @@ knitr::opts_chunk$set(
 This is a small demo of the `sim.realistic.data` package. The package is designed to generate realistic data for simulation studies using shareable summary statistics. The package can be used for abstract summary statistics needed for data generation, and simulating data using the corresponding summary statistics as inputs. 
 
 # The usage of get.summstat.survival function
+Let us first load the package and the example data.
 ```{r}
-# library(sim.realistic.data)
+library(sim.realistic.data)
+data(example_data)
+E <- example_data$E
+Y <- example_data$Y
+X <- example_data$X
+B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
+A <- as.matrix(example_data[, c("A1", "A2")])
 ```
+
+Then, as this is a survival dataset, we can use the `get.summstat.survival` function to get the summary statistics for survival data which can be used to generate new data. We can choose from mathod 1, 2, 3, all, corrsponding to (1) the multivariate normal thresholding for A and B, (2) the multivariate normal thresholding only for B, and regressing A on B, (3) regressing A on B, and the chain of regression methods, (4) all summary statistics needed for the three methods, respectively. See more details in the manuscript.
+
+Here is a demonstration of what we get using the method 1, multivariate normal thresholding:
+```{r}
+summstat.survival <- get.summstat.survival(E, Y, X, B, A, method = "1")
+str(summstat.survival)
+```
+
+# The usage of get.summstat.binary function
+Similarly, if we only have or want to model the outcome as binary, we can use the `get.summstat.binary` function to get the summary statistics for binary data which can be used to generate new data. Again, we have the choice of method 1, 2, 3, all. Here is a demonstration of what we get using the method 1, multivariate normal thresholding:
+```{r}
+summstat.binary <- get.summstat.binary(Y, X, B, A, method = "1")
+str(summstat.binary)
+```
+
+# The usage of generate.data.survival function
+Now, after we abstract the summary statistics, or have the summary statistics from other sources, we can use the `generate.data.survival` function to generate new survival data. 
+```{r}
+data(summstat.survival)
+summstat.survival = list(summstat.survival)
+simulated_data_survival <- generate.data.survival(n=100,Summ.Stat=summstat.survival,method=1)
+head(simulated_data_survival)
+```
+
+Also, we can designate the hazard ratio for the treatment effect for the new data. Here is an example:
+```{r}
+simulated_data_survival_HR <- generate.data.survival(n=100,Summ.Stat=summstat.survival,method=1,set.logHR.X=1.5)
+head(simulated_data_survival_HR)
+```
+
+# The usage of generate.data.binary function
+Similarly, we can use the `generate.data.binary` function to generate new binary data:
+```{r}
+data(summstat.binary)
+summstat.binary = list(summstat.binary)
+simulated_data_binary <- generate.data.binary(n=100,Summ.Stat=summstat.binary, method=1,set.logOR.X=1.5)
+head(simulated_data_binary)
+```
+
+We have demonstrated that the data generated using the methods of this package have similar performance as the bootstrap resampling method. However, the resampling method requires access to the original data, while the methods in this package only require the summary statistics. In addition, the methods in this package can be used with more flexibility to generate data with different treatment effects, and other scenarios including the censor types. For more details about the method and performance of the package, please refer to the manuscript.
+
+
+
+
+
+
+
+
+
+
 

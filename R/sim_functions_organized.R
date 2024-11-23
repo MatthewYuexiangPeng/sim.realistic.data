@@ -50,7 +50,7 @@
 
 
 # Functions to get summary statistics ----
-#' Title
+#' Getting summary statistics for data with survival outcome
 #'
 #' @param E a numeric vector of event times
 #' @param Y a binary vector of outcomes
@@ -69,22 +69,9 @@
 #'
 #' @return a list of summary statistics
 #' @export
-#'
-#' @examples
-#' data(example_data)
-#' E <- example_data$E
-#' Y <- example_data$Y
-#' X <- example_data$X
-#' B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
-#' A <- as.matrix(example_data[, c("A1", "A2")])
-#' summstat.survival <- get.summstat.survival(E, Y, X, B, A, method = "all")
-#' summstat.survival
 get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,365,by=30),
                          my.presc.K=1,tie.method="efron",method="all",censtype="simple")
   {
-  # # test
-  # A=C
-
   if (is.null(E)){
     stop("E is required for survival data")
   }
@@ -401,7 +388,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,365,by=30),
 }
 
 
-#' Title
+#' Getting summary statistics for data with binary outcome
 #'
 #' @param Y a binary vector of outcomes
 #' @param X a binary vector of exposures
@@ -414,21 +401,7 @@ get.summstat.survival <- function(E,Y,X,B,A,prescription.mode=seq(30,365,by=30),
 #'
 #' @return a list of summary statistics
 #' @export
-#'
-#' @examples
-#' data(example_data)
-#' E <- example_data$E
-#' Y <- example_data$Y
-#' X <- example_data$X
-#' B <- as.matrix(example_data[, c("B.1", "B.2", "B.3", "B.4")])
-#' A <- as.matrix(example_data[, c("A1", "A2")])
-#' summstat.binary <- get.summstat.binary(Y, X, B, A, method = "all")
-#' summstat.binary
 get.summstat.binary <- function(Y,X,B,A,method="all"){
-  # #test
-  # A=C
-  # method=1
-
   glm.ctrl <- glm.control(epsilon = 1e-8, maxit = 25, trace = FALSE)
 
   ### (Correlated) binary covariates B
@@ -550,7 +523,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   probs <- predict(ps.fit, type = "response")
   ps.c <- mean(sample(probs[X == 1L], 1000000L, TRUE) > sample(probs[X == 0L], 1000000L, TRUE))
 
-  #### Matthew added: Binary outcome
+  #### Binary outcome
   #### Logistic regression for the event distribution
 
   logit.fit <- glm.fit(cbind(1,X,B,A.indicator), Y, control=glm.ctrl, family=binomial())
@@ -727,7 +700,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   {
     for(i in 2:length(coef.AonB))
     {
-      P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) ) # Matthew: Q: exp( cbind(rep(1,n),B)%*%t(coef.AonB[[i]]) ) Question: want to regress A[2] on A[1]?
+      P.A2 <- exp( cbind(rep(1,n),A.indicator,B)%*%t(coef.AonB[[i]]) )
       P.A2 <- cbind(rep(1,n),P.A2)
       P.A2 <- P.A2/apply(P.A2,1,sum) # gives same result as fitted(multinom(age ~ z + x))
 
@@ -764,13 +737,6 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
                               P.presc.topK=NULL, prescription.mode.topK=NULL # censtype%in%c("simplebump","covbump")
                               )
   {
-  # # test 10.20
-  # noX=FALSE
-
-
-  # if (is.null(coef.cens) || is.null(scale.cens) || is.null(coef.event) || is.null(scale.event)){
-  #   stop("For survival outcome, coef.cens, scale.cens, coef.event, and scale.event must be specified")
-  # }
   if (method == 4 && is.null(user.data)) stop("User data must be provided for method 4")
 
   ### set up specified HR of X
@@ -914,21 +880,6 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
                             coef.Yon1, coef.YonX, coef.YonZ,
                             method=1)
 {
-  # # test 10.8
-  # n=SS$n
-  # P=SS$P
-  # Common.P=SS$Common.P
-  # coef.XonZ=SS$coef.XonZ
-  # coef.AonB=SS$Coef.cat
-  # method=2
-  # coef.Yon1=SS$coef.Yon1
-  # coef.YonX=SS$coef.YonX
-  # coef.YonZ=SS$coef.YonZ
-  # logOR.X=NULL
-  # Quant.norm.B=SS$Quants.norm.B
-  # Corr.norm.B=SS$Corr.norm.B
-
-
   if (is.null(coef.Yon1) || is.null(coef.YonX) || is.null(coef.YonZ)) {
     stop("For binary outcome, coef.Yon1, coef.YonX, and coef.YonZ must be specified")
   }
@@ -960,7 +911,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
   ### Exposure variable X
   X <- exppluscovs$X
 
-  #### Matthew added: Binary outcome
+  #### Binary outcome
   Y <- rbinom(n,size=1,
               p=1 / (1 + exp(-(coef.Yon1 + X * coef.YonX + Z.model.data %*% coef.YonZ))))
   Y.1 <- rbinom(n,size=1,
@@ -980,7 +931,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 
 
 # Functions for generating data ----
-#' Title
+#' Generating data with survival outcome
 #'
 #' @param Summ.Stat a nested list where each element is a list of summary statistics for a specific data site, formatted consistently with the output from the get.summstat.survival function
 #' @param n the number of samples to generate, the default is using the sample size from the summary statistics
@@ -994,20 +945,7 @@ get.summstat.binary <- function(Y,X,B,A,method="all"){
 #'
 #' @return a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, E, and site
 #' @export
-#'
-#' @examples
-#' data(summstat.survival)
-#' summstat.survival = list(summstat.survival)
-#' simulated_data_survival <- generate.data.survival(Summ.Stat=summstat.survival,method=1)
-#' head(simulated_data_survival)
 generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365,method=1, set.logHR.X=NULL){
-  # # test 10.20
-  # censtype="simple"
-  # trunc=365
-  # method=2
-  # set.logHR.X=NULL
-  # i=1
-
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -1112,7 +1050,7 @@ generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365
 }
 
 
-#' Title
+#' Generating data with binary outcome
 #'
 #' @param Summ.Stat a nested list where each element is a list of summary statistics for a specific data site, formatted consistently with the output from the get.summstat.binary function
 #' @param n the number of samples to generate, the default is using the sample size from the summary statistics
@@ -1123,18 +1061,7 @@ generate.data.survival <- function(Summ.Stat,n=NULL,censtype="simple", trunc=365
 #'
 #' @return a dataframe with the generated survival data, where the columns are B, indicator of A, X, Y, and site
 #' @export
-#'
-#' @examples
-#' data(summstat.binary)
-#' summstat.binary = list(summstat.binary)
-#' simulated_data_binary <- generate.data.binary(Summ.Stat=summstat.binary, method=1)
-#' head(simulated_data_binary)
 generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
-  # # test 11.12
-  # method=2
-  # set.logOR.X=NULL
-  # i=1
-
   n.sites<-length(Summ.Stat)
 
   ## Data.Site: simulated data across sites
@@ -1192,10 +1119,6 @@ generate.data.binary <- function(Summ.Stat,n=NULL,method=1, set.logOR.X=NULL){
   return(Data.Simulated)
 }
 
-
-# TODO:
-# add notations critical for the package
-# high dimensional?
 
 
 

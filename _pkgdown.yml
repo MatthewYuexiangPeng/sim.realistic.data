@@ -1,4 +1,16 @@
+title: "sim.realistic.data"
+pkgdown:
+  as_is: true
+
 url: ~
+
+navbar:
+  structure:
+    left: [getstarted, reference]
+  components:
+    getstarted:
+      text: Get Started
+      href: articles/sim.realistic.data.html
+
 template:
   bootstrap: 5
-
